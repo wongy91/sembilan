@@ -1,0 +1,25 @@
+{
+  "name": "sembilan",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Free, open-source turn-by-turn navigation for Malaysia that runs in the browser: English and Malay voice guidance, toll fares, speed-camera and R&R alerts, live traffic, lane guidance and community reports.",
+  "license": "AGPL-3.0-or-later",
+  "homepage": "https://github.com/wongy91/sembilan#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wongy91/sembilan.git"
+  },
+  "bugs": {
+    "url": "https://github.com/wongy91/sembilan/issues"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "dev": "node --no-warnings scripts/dev.mjs",
+    "test": "node --no-warnings --test tests/*.test.mjs",
+    "data": "node scripts/build-plus-plazas.mjs && node scripts/build-pois.mjs",
+    "deploy": "npx wrangler deploy"
+  }
+}
