@@ -4,6 +4,11 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+### Changed
+
+- The 3D buildings setting now also applies while navigating: the driving view tilts and shows buildings in 3D. Turning it on or off mid-drive takes effect immediately.
+- The route line is slimmer and grows with zoom, like the major map apps: about 7 px at street level instead of 13, with a crisp outline, a fainter glow, and traffic colours covering the full line width.
+
 ## [0.2.0] - 2026-10-29
 
 ### Added

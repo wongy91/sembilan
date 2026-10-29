@@ -9,7 +9,13 @@ const STYLES = {
 export const KL = [101.6869, 3.139];
 const EMPTY = { type: 'FeatureCollection', features: [] };
 const LINE = { 'line-cap': 'round', 'line-join': 'round' };
-const width = (a, b) => ['interpolate', ['linear'], ['zoom'], 6, a, 16, b];
+const ROUTE_WIDTH = [[8, 3], [12, 4.5], [15, 7], [18, 12], [20, 18]];
+const width = (scale = 1, extra = 0) => [
+  'interpolate',
+  ['exponential', 1.5],
+  ['zoom'],
+  ...ROUTE_WIDTH.flatMap(([zoom, w]) => [zoom, Math.round((w * scale + extra) * 10) / 10]),
+];
 const ROUTE_COLORS = {
   day: { glow: '#1aa0ff', casing: '#0a5ec2', main: '#1aa0ff', alt: '#9aa8ba' },
   night: { glow: '#2fb4ff', casing: '#e3f3ff', main: '#2fb4ff', alt: '#5d6f8f' },
@@ -226,12 +232,12 @@ export class MapView {
     const add = (layer) => !m.getLayer(layer.id) && m.addLayer(layer, before);
     const c = ROUTE_COLORS[this.night ? 'night' : 'day'];
     const selected = ['get', 'selected'];
-    add({ id: 'sb-routes-alt', type: 'line', source: 'sb-routes', filter: ['!', selected], layout: LINE, paint: { 'line-color': c.alt, 'line-width': width(5, 11), 'line-opacity': 0.9 } });
-    add({ id: 'sb-routes-glow', type: 'line', source: 'sb-routes', filter: selected, layout: LINE, paint: { 'line-color': c.glow, 'line-width': width(14, 34), 'line-blur': width(4, 12), 'line-opacity': this.night ? 0.35 : 0.25 } });
-    add({ id: 'sb-routes-casing', type: 'line', source: 'sb-routes', filter: selected, layout: LINE, paint: { 'line-color': c.casing, 'line-width': width(9, 19) } });
-    add({ id: 'sb-routes-main', type: 'line', source: 'sb-routes', filter: selected, layout: LINE, paint: { 'line-color': c.main, 'line-width': width(6, 14) } });
-    add({ id: 'sb-traffic', type: 'line', source: 'sb-traffic', layout: LINE, paint: { 'line-color': ['match', ['get', 'level'], 1, '#f79009', 2, '#e8590c', 3, '#d92d20', '#7a271a'], 'line-width': width(4, 9) } });
-    add({ id: 'sb-toll', type: 'line', source: 'sb-toll', layout: LINE, paint: { 'line-color': '#ffcc00', 'line-width': width(1.5, 3.5), 'line-dasharray': [1, 2] } });
+    add({ id: 'sb-routes-alt', type: 'line', source: 'sb-routes', filter: ['!', selected], layout: LINE, paint: { 'line-color': c.alt, 'line-width': width(0.75), 'line-opacity': 0.9 } });
+    add({ id: 'sb-routes-glow', type: 'line', source: 'sb-routes', filter: selected, layout: LINE, paint: { 'line-color': c.glow, 'line-width': width(1, 6), 'line-blur': width(0.4), 'line-opacity': this.night ? 0.3 : 0.15 } });
+    add({ id: 'sb-routes-casing', type: 'line', source: 'sb-routes', filter: selected, layout: LINE, paint: { 'line-color': c.casing, 'line-width': width(1, 2.5) } });
+    add({ id: 'sb-routes-main', type: 'line', source: 'sb-routes', filter: selected, layout: LINE, paint: { 'line-color': c.main, 'line-width': width() } });
+    add({ id: 'sb-traffic', type: 'line', source: 'sb-traffic', layout: LINE, paint: { 'line-color': ['match', ['get', 'level'], 1, '#f79009', 2, '#e8590c', 3, '#d92d20', '#7a271a'], 'line-width': width() } });
+    add({ id: 'sb-toll', type: 'line', source: 'sb-toll', layout: LINE, paint: { 'line-color': '#ffcc00', 'line-width': width(0.3), 'line-dasharray': [1, 2] } });
     this.apply3D();
   }
 
