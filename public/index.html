@@ -72,6 +72,12 @@
         <input id="q" type="search" enterkeyhint="search" spellcheck="false" data-i18n-placeholder="searchPlaceholder">
         <button id="btn-clear" class="icon-btn" type="button" hidden data-i18n-label="close"></button>
       </form>
+      <div class="nearby" role="group">
+        <button class="chip" type="button" data-action="nearby" data-cat="fuel">⛽ <span data-i18n="catFuel"></span></button>
+        <button class="chip" type="button" data-action="nearby" data-cat="food">🍜 <span data-i18n="catFood"></span></button>
+        <button class="chip" type="button" data-action="nearby" data-cat="parking">🅿️ <span data-i18n="catParking"></span></button>
+        <button class="chip" type="button" data-action="nearby" data-cat="ev">🔌 <span data-i18n="catEv"></span></button>
+      </div>
       <ul id="results" hidden></ul>
     </div>
     <div id="sheet-body"></div>

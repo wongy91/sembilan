@@ -1,6 +1,6 @@
 import { MapView } from './map.js';
 import { fmtAgo, fmtClock, fmtDistance, fmtDuration, getLang, setLang, t } from './i18n.js';
-import { reversePlace, searchPlaces } from './search.js';
+import { nearbyPlaces, reversePlace, searchPlaces } from './search.js';
 import { loadLanes, planRoutes } from './routing.js';
 import { Navigator } from './navigator.js';
 import { instruction, maneuverIcon, roadName } from './instructions.js';
@@ -31,7 +31,7 @@ const state = {
   searchAbort: null,
   fix: null,
   realFix: null,
-  backend: { traffic: false, reports: false, fares: false },
+  backend: { traffic: false, reports: false, fares: false, search: false },
   poiData: null,
   nav: null,
   following: true,
@@ -384,7 +384,7 @@ function showResults(items) {
     .map((p, i) =>
       p.msg
         ? `<li class="msg">${esc(p.msg)}</li>`
-        : `<li><button type="button" data-i="${i}"><b>${p.local ? `${{ home: '🏠', work: '💼' }[p.tag] || '🕘'} ` : ''}${esc(p.name)}</b><small>${esc(p.sub)}</small></button></li>`,
+        : `<li><button type="button" data-i="${i}"><span><b>${p.local ? `${{ home: '🏠', work: '💼' }[p.tag] || '🕘'} ` : ''}${esc(p.name)}</b><small>${esc(p.sub)}</small></span>${Number.isFinite(p.dist) ? `<em>${esc(fmtDistance(p.dist))}</em>` : ''}</button></li>`,
     )
     .join('');
   ul.hidden = false;
@@ -425,13 +425,34 @@ async function runSearch(query) {
   showResults([...local, { msg: t('searching') }]);
   try {
     const near = state.fix ? [state.fix.lon, state.fix.lat] : map.center();
-    const list = await searchPlaces(query, { near, lang: getLang(), signal: ctrl.signal });
+    const list = await searchPlaces(query, { near, lang: getLang(), signal: ctrl.signal, tomtom: state.backend.search });
     if (ctrl.signal.aborted) return;
     searchCache.set(cacheKey(query), list);
     if (searchCache.size > 100) searchCache.delete(searchCache.keys().next().value);
     showMerged(local, list, 'noResults');
   } catch {
     if (!ctrl.signal.aborted) showMerged(local, [], 'searchFailed');
+  }
+}
+
+const CATEGORY_LABEL = { fuel: 'catFuel', food: 'catFood', parking: 'catParking', ev: 'catEv' };
+
+async function runNearby(cat) {
+  state.searchAbort?.abort();
+  const ctrl = (state.searchAbort = new AbortController());
+  const label = t(CATEGORY_LABEL[cat]);
+  $('q').value = label;
+  $('btn-clear').hidden = false;
+  document.body.classList.add('searching');
+  syncSlide();
+  showResults([{ msg: t('searching') }]);
+  try {
+    const near = state.fix ? [state.fix.lon, state.fix.lat] : map.center();
+    const list = await nearbyPlaces(cat, { near, signal: ctrl.signal, tomtom: state.backend.search, label });
+    if (ctrl.signal.aborted) return;
+    showResults(list.length ? list : [{ msg: t('noResults') }]);
+  } catch {
+    if (!ctrl.signal.aborted) showResults([{ msg: t('searchFailed') }]);
   }
 }
 
@@ -1142,6 +1163,8 @@ function bindUi() {
         return toast(t('saved'));
       case 'share-place':
         return share(state.place.name, placeUrl(state.place));
+      case 'nearby':
+        return runNearby(target.dataset.cat);
       case 'install':
         return promptInstall();
       case 'install-later':

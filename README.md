@@ -17,7 +17,8 @@ Free, open-source turn-by-turn navigation for Malaysia that runs in the browser.
 | Alerts | Speed cameras with their limit, toll plazas, traffic jams and community reports, spoken ahead of time |
 | R&R | The next rest area on your side of the highway |
 | Community reports | Accident, police, hazard, jam, road closed, flood, pothole. Other drivers confirm or clear them |
-| Map | Day and night themes (automatic by time), 2D or 3D buildings, search, long-press to drop a pin |
+| Search | Places and street addresses with the distance to each. Nearby ⛽ petrol, 🍜 food, 🅿️ parking and 🔌 EV charging, also while driving. Addresses use TomTom when a key is set |
+| Map | Day and night themes (automatic by time), 2D or 3D buildings, long-press to drop a pin |
 | While driving | Speedometer with speed-limit sign, current street name, quick mute, search and settings, share ETA, arrival screen, screen stays awake |
 | Saved places | Home, Work and recent places, kept on your phone. **Copy my places** makes a private link that adds them on another phone or in the home-screen app |
 | Offline and install | Opens instantly from an offline copy; install it to the home screen (Android, iPhone) or the Dock (Mac Safari) |
@@ -30,7 +31,7 @@ You need Node.js 22.13 or later. There are no dependencies to install.
 git clone https://github.com/wongy91/sembilan.git
 cd sembilan
 npm run dev    # http://localhost:8787
-npm test       # 45 tests
+npm test       # 54 tests
 ```
 
 `npm run dev` serves the app and the API on one port, with community reports stored in an in-memory SQLite database. Use the **Demo** button on a route to drive it without moving.
@@ -54,8 +55,8 @@ npm test       # 45 tests
  │ voice · alerts · offline copy (sw.js) │             │ /api/traffic  TomTom traffic tiles   │
  └───┬──────────────┬─────────────┬──────┘             │ /api/reports  community reports (D1) │
      │              │             │                    │ /api/fares    PLUS toll fares        │
-     ▼              ▼             ▼                    └──────────────────────────────────────┘
- Valhalla /      Photon       OpenFreeMap
+     ▼              ▼             ▼                    │ /api/search   TomTom search, nearby  │
+ Valhalla /      Photon       OpenFreeMap              └──────────────────────────────────────┘
  OSRM            (search)     (map tiles)
  (routes, lanes)
 ```
@@ -106,7 +107,7 @@ Everything secret is a Worker secret, set with `npx wrangler secret put <NAME>`.
 
 | Name | Type | Used for |
 | -- | -- | -- |
-| `TOMTOM_API_KEY` | Secret, optional | Live-traffic routing, the traffic layer and speed limits. Without it, routing uses Valhalla and OSRM |
+| `TOMTOM_API_KEY` | Secret, optional | Live-traffic routing, the traffic layer, speed limits, address search and nearby places. Without it, routing uses Valhalla and OSRM, and search uses Photon only |
 | `REPORT_SALT` | Secret, recommended | Keeps reporter hashes from being traced back to IP addresses. Set it to a long random value |
 | `DB` | D1 binding | Community reports. Without it, reports are switched off |
 
@@ -129,6 +130,7 @@ Wrong roads, missing U-turns and missing cameras are OpenStreetMap data. Fix the
 - **Browser limits.** Guidance stops when the screen is off, and there is no CarPlay or Android Auto. That needs a native app.
 - **Lanes and speed limits.** Lanes appear only where OpenStreetMap mappers have tagged them, and arrive a few seconds after you start driving, longer when the free Valhalla server is busy. Speed limits need a TomTom key.
 - **Toll fares** use PLUS's own fare service, the one its website calculator calls. It is undocumented and can change or block outside callers at any time; fares then disappear while navigation keeps working. Only PLUS is priced, Class 1 only, without discounts. Bandar Baru Nilai and Port Dickson Utara/Selatan have no clear OpenStreetMap match and show "fare unavailable".
+- **Search without a TomTom key** uses Photon only. It misses many house addresses, and its nearby results only include places whose names match the category (for example Petron for petrol).
 - **Free public servers.** Valhalla (FOSSGIS), the OSRM demo server and Photon have fair-use policies and pick up map edits after a delay. Self-host Valhalla before real traffic arrives; a Malaysia–Singapore extract is small.
 - **Voices** depend on the phone. Without a Malay voice it falls back to Indonesian, then the default voice.
 - A toll plaza mapped as a single booth beside the lanes can be missed, for example the Second Penang Bridge plaza.

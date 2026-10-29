@@ -1,4 +1,14 @@
+import { haversine } from './geo.js';
+
 const PHOTON = 'https://photon.komoot.io';
+const ADDRESS_LIKE = /\d|\b(jalan|jln|lorong|lrg|taman|tmn|persiaran|lebuh|lot|no|blok|block|kampung|kg|bandar|seksyen|section)\b/i;
+const OSM_NEARBY = {
+  fuel: ['petrol', 'amenity:fuel'],
+  food: ['restaurant', 'amenity:restaurant'],
+  parking: ['parking', 'amenity:parking'],
+  ev: ['charging station', 'amenity:charging_station'],
+};
+const NEARBY_LIMIT_M = 30000;
 const BBOX = '99.5,0.8,119.5,7.5';
 const COORD = /^\s*(-?\d{1,2}(?:\.\d+)?)\s*[,\s]\s*(-?\d{1,3}(?:\.\d+)?)\s*$/;
 
@@ -12,13 +22,70 @@ export function toPlace(feature) {
   return { name, sub, lon, lat };
 }
 
-export async function searchPlaces(query, { near, lang, signal } = {}) {
+export const isAddressLike = (query) => ADDRESS_LIKE.test(query);
+
+const withDistance = (places, near) => places.map((p) => ({ ...p, dist: near ? haversine(near, [p.lon, p.lat]) : null }));
+
+export function mergePlaces(first, second, limit = 8) {
+  const out = [];
+  for (const p of [...first, ...second]) {
+    const dup = out.some((q) => haversine([p.lon, p.lat], [q.lon, q.lat]) < 80 && (q.name.toLowerCase() === p.name.toLowerCase() || haversine([p.lon, p.lat], [q.lon, q.lat]) < 15));
+    if (!dup) out.push(p);
+  }
+  return out.slice(0, limit);
+}
+
+async function tomtomSearch(params, signal) {
+  const res = await fetch(`/api/search?${params}`, { signal });
+  if (!res.ok) throw new Error(`search ${res.status}`);
+  return (await res.json()).results || [];
+}
+
+const nearParams = (near, extra) => new URLSearchParams({ ...extra, lat: near[1].toFixed(5), lon: near[0].toFixed(5) });
+
+export async function searchPlaces(query, { near, lang, signal, tomtom = false } = {}) {
   const coord = COORD.exec(query);
   if (coord) {
     const lat = Number(coord[1]);
     const lon = Number(coord[2]);
     return [{ name: `${lat.toFixed(5)}, ${lon.toFixed(5)}`, sub: '', lon, lat }];
   }
+  const remote = () => tomtomSearch(nearParams(near, { q: query }), signal).catch(() => []);
+  const early = tomtom && isAddressLike(query) ? remote() : null;
+  let osm = [];
+  let failure = null;
+  try {
+    osm = await photonSearch(query, { near, lang, signal });
+  } catch (err) {
+    if (!tomtom || signal?.aborted) throw err;
+    failure = err;
+  }
+  let list = osm;
+  if (early) list = mergePlaces(await early, osm);
+  else if (tomtom && osm.length < 3) list = mergePlaces(osm, await remote());
+  if (!list.length && failure) throw failure;
+  return withDistance(list, near);
+}
+
+export async function nearbyPlaces(cat, { near, signal, tomtom = false, label = '' } = {}) {
+  if (tomtom) {
+    try {
+      return withDistance(await tomtomSearch(nearParams(near, { cat }), signal), near).sort((a, b) => a.dist - b.dist);
+    } catch (err) {
+      if (signal?.aborted) throw err;
+    }
+  }
+  const [q, tag] = OSM_NEARBY[cat];
+  const params = new URLSearchParams({ q, osm_tag: tag, lat: near[1].toFixed(4), lon: near[0].toFixed(4), zoom: '14', location_bias_scale: '0.2', limit: '15', bbox: BBOX });
+  const res = await fetch(`${PHOTON}/api/?${params}`, { signal });
+  if (!res.ok) throw new Error(`nearby ${res.status}`);
+  const places = ((await res.json()).features || []).map((f) => ({ ...toPlace(f), name: f.properties?.name || label }));
+  return withDistance(places, near)
+    .filter((p) => p.dist <= NEARBY_LIMIT_M)
+    .sort((a, b) => a.dist - b.dist);
+}
+
+async function photonSearch(query, { near, lang, signal }) {
   const params = new URLSearchParams({ q: query, limit: '8', bbox: BBOX });
   if (near) {
     params.set('lat', near[1].toFixed(4));

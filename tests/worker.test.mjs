@@ -23,9 +23,9 @@ async function withFetch(fake, fn) {
 }
 
 test('health reports which optional features are configured', async () => {
-  assert.deepEqual(await (await call({}, '/api/health')).json(), { ok: true, traffic: false, reports: false, fares: true });
+  assert.deepEqual(await (await call({}, '/api/health')).json(), { ok: true, traffic: false, reports: false, fares: true, search: false });
   const env = { TOMTOM_API_KEY: 'k', DB: createLocalD1() };
-  assert.deepEqual(await (await call(env, '/api/health')).json(), { ok: true, traffic: true, reports: true, fares: true });
+  assert.deepEqual(await (await call(env, '/api/health')).json(), { ok: true, traffic: true, reports: true, fares: true, search: true });
 });
 
 test('route proxy is disabled without a TomTom key', async () => {
@@ -161,6 +161,73 @@ test('PLUS fares: rejects malformed requests before calling PLUS', async () => {
       for (const body of bad) assert.equal((await call({}, '/api/fares', { method: 'POST', body })).status, 400);
     },
   );
+});
+
+const TOMTOM_SEARCH = {
+  results: [
+    {
+      type: 'Point Address',
+      address: { streetNumber: '31', streetName: 'Jalan BKD 44', municipalitySubdivision: 'Taman Bukit Katil Damai 2', municipality: 'Melaka', countrySubdivision: 'Melaka', freeformAddress: '31 Jalan BKD 44, Taman Bukit Katil Damai 2, 75450 Melaka' },
+      position: { lat: 2.2195, lon: 102.2869 },
+    },
+    {
+      type: 'POI',
+      poi: { name: 'Petronas Taman Desa' },
+      address: { streetName: 'Jalan Desa Utama', municipality: 'Kuala Lumpur', countrySubdivision: 'Kuala Lumpur' },
+      position: { lat: 3.1012, lon: 101.6835 },
+      entryPoints: [{ type: 'main', position: { lat: 3.1014, lon: 101.6838 } }],
+    },
+    { type: 'Geography', address: {}, position: {} },
+  ],
+};
+
+test('search proxy builds a TomTom fuzzy search near the user, caches it and never echoes the key', async () => {
+  const seen = [];
+  const env = { TOMTOM_API_KEY: 'secret-key' };
+  const fake = async (url) => {
+    seen.push(new URL(url));
+    return new Response(JSON.stringify(TOMTOM_SEARCH));
+  };
+  const path = '/api/search?q=No.31%20Jalan%20BKD%2044&lat=2.22&lon=102.28';
+  const res = await withFetch(fake, () => call(env, path));
+  const text = await res.text();
+  assert.equal(res.status, 200);
+  assert.ok(!text.includes('secret-key'));
+  assert.equal(seen[0].pathname, '/search/2/search/No.31%20Jalan%20BKD%2044.json');
+  assert.equal(seen[0].searchParams.get('countrySet'), 'MY,SG');
+  assert.equal(seen[0].searchParams.get('typeahead'), 'true');
+  assert.equal(seen[0].searchParams.get('lat'), '2.22');
+  const { results } = JSON.parse(text);
+  assert.deepEqual(results[0], { name: '31 Jalan BKD 44', sub: 'Taman Bukit Katil Damai 2, Melaka', lon: 102.2869, lat: 2.2195 });
+  assert.deepEqual(results[1], { name: 'Petronas Taman Desa', sub: 'Jalan Desa Utama, Kuala Lumpur', lon: 101.6838, lat: 3.1014 }, 'POIs route to their entrance');
+  assert.equal(results.length, 2, 'results without a position are dropped');
+  await withFetch(fake, () => call(env, path));
+  assert.equal(seen.length, 1, 'the second identical search is served from cache');
+});
+
+test('nearby search asks TomTom for a category within 10 km', async () => {
+  let seen;
+  const res = await withFetch(
+    async (url) => {
+      seen = new URL(url);
+      return new Response(JSON.stringify({ results: [] }));
+    },
+    () => call({ TOMTOM_API_KEY: 'k' }, '/api/search?cat=fuel&lat=3.1&lon=101.68'),
+  );
+  assert.equal(res.status, 200);
+  assert.equal(seen.pathname, '/search/2/nearbySearch/.json');
+  assert.equal(seen.searchParams.get('categorySet'), '7311');
+  assert.equal(seen.searchParams.get('radius'), '10000');
+});
+
+test('search proxy validates input and needs a TomTom key', async () => {
+  assert.equal((await call({}, '/api/search?q=klcc&lat=3.1&lon=101.7')).status, 501);
+  const env = { TOMTOM_API_KEY: 'k' };
+  assert.equal((await call(env, '/api/search?q=k&lat=3.1&lon=101.7')).status, 400);
+  assert.equal((await call(env, '/api/search?q=klcc&lat=51.5&lon=-0.1')).status, 400);
+  assert.equal((await call(env, '/api/search?cat=casino&lat=3.1&lon=101.7')).status, 400);
+  const failed = await withFetch(async () => new Response('', { status: 500 }), () => call(env, '/api/search?q=jalan%20ampang&lat=3.1&lon=101.7'));
+  assert.equal(failed.status, 502);
 });
 
 test('non-API paths go to static assets', async () => {

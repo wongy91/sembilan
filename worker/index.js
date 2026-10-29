@@ -5,6 +5,9 @@ const MAX_BODY = 2048;
 const PLUS_FARE_URL = 'https://plusapp-api-prod1.azurewebsites.net/api/tolls/GetTollFare';
 const FARE_TTL_MS = 12 * 3600000;
 const fareCache = new Map();
+const SEARCH_TTL_MS = 6 * 3600000;
+const searchCache = new Map();
+const NEARBY_CATEGORIES = { fuel: '7311', food: '7315', parking: '7369,7313', ev: '7309' };
 
 class HttpError extends Error {
   constructor(status, message) {
@@ -93,6 +96,46 @@ async function trafficTile(env, ctx, url, match) {
   const res = new Response(upstream.body, { headers: { 'content-type': 'image/png', 'cache-control': 'public, max-age=60' } });
   if (cache) ctx.waitUntil(cache.put(key, res.clone()));
   return res;
+}
+
+function tomtomPlace(r) {
+  const a = r.address || {};
+  const at = r.entryPoints?.find((e) => e.type === 'main')?.position || r.position;
+  if (!Number.isFinite(at?.lat) || !Number.isFinite(at?.lon)) return null;
+  const street = [a.streetNumber, a.streetName].filter(Boolean).join(' ');
+  const name = r.poi?.name || street || a.municipalitySubdivision || a.municipality || a.freeformAddress || '';
+  const parts = [r.poi ? street : '', a.municipalitySubdivision, a.municipality, a.countrySubdivision].filter((p) => p && p !== name);
+  return { name, sub: [...new Set(parts)].join(', '), lon: at.lon, lat: at.lat };
+}
+
+async function search(env, url, now) {
+  if (!env.TOMTOM_API_KEY) throw new HttpError(501, 'search is not configured');
+  const q = (url.searchParams.get('q') || '').trim();
+  const cat = url.searchParams.get('cat');
+  const lat = Number(url.searchParams.get('lat'));
+  const lon = Number(url.searchParams.get('lon'));
+  if (!inRegion(lon, lat)) throw new HttpError(400, 'lat and lon must be inside Malaysia');
+  if (cat ? !NEARBY_CATEGORIES[cat] : q.length < 2 || q.length > 120) {
+    throw new HttpError(400, cat ? 'unknown category' : 'q must be 2 to 120 characters');
+  }
+  const key = `${cat ? `cat:${cat}` : q.toLowerCase()}|${lat.toFixed(2)},${lon.toFixed(2)}`;
+  const hit = searchCache.get(key);
+  if (hit && now - hit.time < SEARCH_TTL_MS) return json({ results: hit.results });
+  const params = new URLSearchParams({ key: env.TOMTOM_API_KEY, lat: String(lat), lon: String(lon), language: 'en-GB' });
+  let path;
+  if (cat) {
+    Object.entries({ categorySet: NEARBY_CATEGORIES[cat], radius: '10000', limit: '20' }).forEach(([k, v]) => params.set(k, v));
+    path = 'nearbySearch/.json';
+  } else {
+    Object.entries({ typeahead: 'true', countrySet: 'MY,SG', limit: '8' }).forEach(([k, v]) => params.set(k, v));
+    path = `search/${encodeURIComponent(q)}.json`;
+  }
+  const upstream = await fetch(`https://api.tomtom.com/search/2/${path}?${params}`, { signal: AbortSignal.timeout(8000) });
+  if (!upstream.ok) throw new HttpError(502, `search upstream returned ${upstream.status}`);
+  const results = ((await upstream.json()).results || []).map(tomtomPlace).filter((p) => p?.name);
+  searchCache.set(key, { results, time: now });
+  if (searchCache.size > 2000) searchCache.delete(searchCache.keys().next().value);
+  return json({ results });
 }
 
 async function plusFare(from, to, now) {
@@ -220,8 +263,9 @@ async function api(request, env, ctx, url) {
   const { pathname } = url;
   const method = request.method;
   if (pathname === '/api/health' && method === 'GET') {
-    return json({ ok: true, traffic: !!env.TOMTOM_API_KEY, reports: !!env.DB, fares: true });
+    return json({ ok: true, traffic: !!env.TOMTOM_API_KEY, reports: !!env.DB, fares: true, search: !!env.TOMTOM_API_KEY });
   }
+  if (pathname === '/api/search' && method === 'GET') return search(env, url, now);
   if (pathname === '/api/route' && method === 'POST') return route(request, env);
   if (pathname === '/api/fares' && method === 'POST') return fares(request, now);
   const tile = /^\/api\/traffic\/(\d+)\/(\d+)\/(\d+)\.png$/.exec(pathname);
