@@ -1521,6 +1521,79 @@ body.nav-alts .sheet {
   height: 18px;
 }
 
+#offer {
+  position: fixed;
+  left: 14px;
+  right: 14px;
+  bottom: calc(var(--sheet-h, 0px) + 14px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 12px 16px 18px;
+  border-radius: var(--radius);
+  background: var(--card);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  z-index: 4;
+  animation: drop 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.offer-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.offer-text b {
+  color: var(--go);
+  font-size: 19px;
+  font-weight: 900;
+}
+
+.offer-text span {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+#offer .btn {
+  min-height: 46px;
+  padding: 0 16px;
+  box-shadow: none;
+}
+
+#offer .btn.primary {
+  background: var(--go);
+}
+
+.offer-timer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: var(--go);
+  transform-origin: left;
+  animation: offer-timer var(--offer-ms, 20s) linear forwards;
+}
+
+@keyframes offer-timer {
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@media (min-width: 900px) {
+  #offer {
+    left: auto;
+    width: 440px;
+  }
+}
+
 @keyframes drop {
   from {
     transform: translateY(-12px);

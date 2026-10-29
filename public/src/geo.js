@@ -163,6 +163,13 @@ export function slice(coords, cum, fromAlong, toAlong = Infinity) {
   return out;
 }
 
+export function thin(coords, spacing) {
+  const out = [coords[0]];
+  for (let i = 1; i < coords.length - 1; i++) if (haversine(out[out.length - 1], coords[i]) >= spacing) out.push(coords[i]);
+  out.push(coords[coords.length - 1]);
+  return out;
+}
+
 export function bbox(coords) {
   let minX = Infinity;
   let minY = Infinity;

@@ -59,6 +59,38 @@ test('route proxy builds a traffic-aware TomTom request and never echoes the key
   assert.equal(seen.searchParams.get('vehicleHeading'), '10');
 });
 
+test('route proxy times a reference route and asks TomTom only for better alternatives', async () => {
+  let seen;
+  const reference = Array.from({ length: 1500 }, (_, i) => [+(101.712 - i * 0.0004).toFixed(5), +(3.1579 - i * 0.0003).toFixed(5)]);
+  const res = await withFetch(
+    async (url, init) => {
+      seen = { url: new URL(url), init };
+      return Response.json({ routes: [{ summary: { travelTimeInSeconds: 900 } }, { summary: { travelTimeInSeconds: 600 } }] });
+    },
+    () => call({ TOMTOM_API_KEY: 'k' }, '/api/route', { method: 'POST', body: { reference, avoidTolls: true } }),
+  );
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).routes.length, 2);
+  assert.equal(seen.init.method, 'POST');
+  assert.equal(seen.url.pathname, `/routing/1/calculateRoute/3.1579,101.712:${reference.at(-1)[1]},${reference.at(-1)[0]}/json`);
+  assert.equal(seen.url.searchParams.get('alternativeType'), 'betterRoute');
+  assert.equal(seen.url.searchParams.get('maxAlternatives'), '1');
+  assert.equal(seen.url.searchParams.get('traffic'), 'true');
+  assert.deepEqual(seen.url.searchParams.getAll('avoid'), ['tollRoads']);
+  const sent = JSON.parse(seen.init.body).supportingPoints;
+  assert.equal(sent.length, 1500);
+  assert.deepEqual(sent[1], { latitude: 3.1576, longitude: 101.7116 });
+});
+
+test('route proxy validates reference routes', async () => {
+  const env = { TOMTOM_API_KEY: 'k' };
+  const post = (reference) => call(env, '/api/route', { method: 'POST', body: { reference } });
+  assert.equal((await post([[101.7, 3.1]])).status, 400, 'one point is not a route');
+  assert.equal((await post(Array.from({ length: 2001 }, () => [101.7, 3.1]))).status, 400, 'too many points');
+  assert.equal((await post([[101.7, 3.1], [-0.12, 51.5]])).status, 400, 'outside Malaysia');
+  assert.equal((await post('nope')).status, 400);
+});
+
 test('route proxy rejects points outside Malaysia and upstream failures', async () => {
   const env = { TOMTOM_API_KEY: 'k' };
   const outside = await call(env, '/api/route', { method: 'POST', body: { from: [2.35, 48.85], to: [101.09, 4.59] } });

@@ -2,7 +2,7 @@ import { reportError } from './errors.js';
 import { KL, MapView } from './map.js';
 import { fmtAgo, fmtClock, fmtDistance, fmtDuration, getLang, setLang, t } from './i18n.js';
 import { nearbyPlaces, reversePlace, searchPlaces } from './search.js';
-import { loadLanes, planRoutes } from './routing.js';
+import { fasterRoute, loadLanes, pickFaster, planRoutes } from './routing.js';
 import { Navigator } from './navigator.js';
 import { instruction, maneuverIcon, roadName } from './instructions.js';
 import { poisAlongRoute, reportPois, summarize, trafficPois } from './pois.js';
@@ -83,8 +83,13 @@ const isNight = () => {
   return h >= 19 || h < 7;
 };
 
+const FASTER_EVERY = 5 * 60000;
+const OFFER_MS = 20000;
+const QUIET_AFTER_CHANGE = 2 * 60000;
+const QUIET_AFTER_DECLINE = 10 * 60000;
+
 const map = createMap();
-window.sembilan = { map, state };
+window.sembilan = { map, state, checkFaster: () => state.nav && checkFaster(state.nav) };
 
 function createMap() {
   try {
@@ -425,6 +430,7 @@ async function openAlternatives() {
   const nav = state.nav;
   const fix = state.fix;
   if (!nav || !fix) return toast(t('needLocation'));
+  clearOffer(nav);
   const progress = nav.navigator.progress();
   const route = nav.route;
   const current = {
@@ -786,6 +792,10 @@ function startNav(simulated) {
     lastReroute: 0,
     rerouting: false,
     reportTimer: null,
+    fasterTimer: null,
+    offer: null,
+    routeChangedAt: Date.now(),
+    declinedAt: 0,
   };
   fetchNavLanes(state.nav, 0);
   state.routes = [route];
@@ -809,6 +819,10 @@ function startNav(simulated) {
     refreshReports();
     state.nav.reportTimer = setInterval(refreshReports, 90000);
   }
+  if (state.backend.traffic) {
+    const nav = state.nav;
+    nav.fasterTimer = setInterval(() => checkFaster(nav), FASTER_EVERY);
+  }
 }
 
 function finishNav(arrived) {
@@ -816,6 +830,8 @@ function finishNav(arrived) {
   if (!nav) return;
   nav.stopSim?.();
   clearInterval(nav.reportTimer);
+  clearInterval(nav.fasterTimer);
+  clearOffer(nav);
   releaseWakeLock();
   if (!arrived) voice.stop();
   state.nav = null;
@@ -938,7 +954,7 @@ function navTick(fix) {
   map.driveTo(position, fix.heading, fix.speed ?? 0);
   const now = performance.now();
   if (!nav.lineAt || (now - nav.lineAt > 1000 && Math.abs(progress.along - nav.lineAlong) > 20)) {
-    map.showRoutes([nav.route, ...(nav.alts?.list?.slice(1).map((a) => a.route) || [])], 0, progress.along);
+    map.showRoutes([nav.route, ...(nav.alts?.list?.slice(1).map((a) => a.route) || []), ...(nav.offer ? [nav.offer.route] : [])], 0, progress.along);
     nav.lineAt = now;
     nav.lineAlong = progress.along;
   }
@@ -959,6 +975,8 @@ function navTick(fix) {
 }
 
 function useRoute(nav, route) {
+  clearOffer(nav);
+  nav.routeChangedAt = Date.now();
   nav.route = route;
   nav.calloutFor = undefined;
   nav.lanesFor = undefined;
@@ -974,6 +992,57 @@ function useRoute(nav, route) {
     nav.stopSim?.();
     nav.stopSim = simulate(route, handleFix, { speedup: 3 });
   }
+}
+
+async function checkFaster(nav) {
+  const now = Date.now();
+  if (state.nav !== nav || nav.offer || nav.alts || nav.rerouting || nav.checkingFaster) return;
+  if (now - nav.routeChangedAt < QUIET_AFTER_CHANGE || now - nav.declinedAt < QUIET_AFTER_DECLINE) return;
+  const progress = nav.navigator.progress();
+  if (progress.remainingTime < 600) return;
+  const route = nav.route;
+  nav.checkingFaster = true;
+  try {
+    const found = pickFaster(await fasterRoute(route, progress.along, { avoidTolls: settings.avoidTolls, avoidHighways: settings.avoidHighways }));
+    if (found && state.nav === nav && nav.route === route && !nav.alts) offerFaster(nav, found);
+  } catch {
+  } finally {
+    nav.checkingFaster = false;
+  }
+}
+
+function offerFaster(nav, offer) {
+  nav.offer = offer;
+  nav.lineAt = 0;
+  const via = offer.route.via?.length ? t('via', { road: offer.route.via.join(' · ') }) : t('fasterTitle');
+  const node = $('offer');
+  node.style.setProperty('--offer-ms', `${OFFER_MS}ms`);
+  node.innerHTML = `<div class="offer-text"><b>${esc(t('faster', { d: fmtDuration(offer.saving) }))}</b><span>${esc(via)}</span></div>
+    <button class="btn primary" type="button" data-offer="take">${esc(t('switchRoute'))}</button>
+    <button class="btn" type="button" data-offer="keep">${esc(t('keepRoute'))}</button>
+    <i class="offer-timer" aria-hidden="true"></i>`;
+  node.hidden = false;
+  voice.say([{ text: t('fasterSpoken', { m: Math.round(offer.saving / 60) }), priority: 1 }]);
+  nav.offerTimer = setTimeout(() => answerOffer(nav, false), OFFER_MS);
+}
+
+function clearOffer(nav) {
+  clearTimeout(nav.offerTimer);
+  nav.offer = null;
+  nav.lineAt = 0;
+  $('offer').hidden = true;
+}
+
+function answerOffer(nav, take) {
+  const offer = nav.offer;
+  if (!offer || state.nav !== nav) return;
+  clearOffer(nav);
+  if (!take) {
+    nav.declinedAt = Date.now();
+    return;
+  }
+  useRoute(nav, offer.route);
+  toast(t('routeChanged'));
 }
 
 async function changeDestination(place) {
@@ -1303,6 +1372,10 @@ function bindUi() {
   $('install-copy').addEventListener('click', () => share(t('installTitle'), `${location.origin}/`));
   $('btn-copy-places').addEventListener('click', copyPlaces);
   $('btn-privacy').addEventListener('click', () => $('dlg-privacy').showModal());
+  $('offer').addEventListener('click', (e) => {
+    const button = e.target.closest('[data-offer]');
+    if (button && state.nav) answerOffer(state.nav, button.dataset.offer === 'take');
+  });
   $('dlg-save').addEventListener('close', closeSaveDialog);
   $('update-later').innerHTML = UI.close;
   $('update-restart').addEventListener('click', () => location.reload());

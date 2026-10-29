@@ -5,6 +5,8 @@ const REGION = [99.0, 0.5, 120.0, 8.0];
 const REPORT_TTL_MIN = { accident: 90, police: 60, hazard: 120, jam: 30, closure: 240, flood: 360, pothole: 1440 };
 const MAX_REPORTS_PER_HOUR = 10;
 const MAX_BODY = 2048;
+const MAX_ROUTE_BODY = 65536;
+const MAX_REFERENCE_POINTS = 2000;
 const PLUS_FARE_URL = 'https://plusapp-api-prod1.azurewebsites.net/api/tolls/GetTollFare';
 const FARE_TTL_MS = 12 * 3600000;
 const fareCache = new Map();
@@ -39,9 +41,9 @@ function lonLat(value, field) {
   return [lon, lat];
 }
 
-async function body(request) {
+async function body(request, max = MAX_BODY) {
   const text = await request.text();
-  if (text.length > MAX_BODY) throw new HttpError(413, 'body too large');
+  if (text.length > max) throw new HttpError(413, 'body too large');
   try {
     return JSON.parse(text || '{}');
   } catch {
@@ -63,11 +65,19 @@ async function reporterId(request, env, now) {
   return [...digest.slice(0, 12)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+function referenceRoute(value) {
+  if (!Array.isArray(value) || value.length < 2 || value.length > MAX_REFERENCE_POINTS) {
+    throw new HttpError(400, `reference must hold 2 to ${MAX_REFERENCE_POINTS} [lon, lat] points`);
+  }
+  return value.map((p) => lonLat(p, 'reference'));
+}
+
 async function route(request, env) {
   if (!env.TOMTOM_API_KEY) throw new HttpError(501, 'live traffic routing is not configured');
-  const input = await body(request);
-  const from = lonLat(input.from, 'from');
-  const to = lonLat(input.to, 'to');
+  const input = await body(request, MAX_ROUTE_BODY);
+  const reference = input.reference == null ? null : referenceRoute(input.reference);
+  const from = reference ? reference[0] : lonLat(input.from, 'from');
+  const to = reference ? reference.at(-1) : lonLat(input.to, 'to');
   const params = new URLSearchParams({
     key: env.TOMTOM_API_KEY,
     traffic: 'true',
@@ -83,10 +93,18 @@ async function route(request, env) {
   if (input.avoidHighways) params.append('avoid', 'motorways');
   const heading = Number(input.heading);
   if (input.heading != null && Number.isFinite(heading)) params.set('vehicleHeading', String(Math.round(((heading % 360) + 360) % 360)));
+  const init = { signal: AbortSignal.timeout(12000) };
+  if (reference) {
+    params.set('maxAlternatives', '1');
+    params.set('alternativeType', 'betterRoute');
+    Object.assign(init, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ supportingPoints: reference.map(([lon, lat]) => ({ latitude: lat, longitude: lon })) }),
+    });
+  }
   const path = `${from[1]},${from[0]}:${to[1]},${to[0]}`;
-  const upstream = await fetch(`https://api.tomtom.com/routing/1/calculateRoute/${path}/json?${params}`, {
-    signal: AbortSignal.timeout(12000),
-  });
+  const upstream = await fetch(`https://api.tomtom.com/routing/1/calculateRoute/${path}/json?${params}`, init);
   if (!upstream.ok) throw new HttpError(502, `routing upstream returned ${upstream.status}`);
   const data = await upstream.json();
   return json({ routes: data.routes || [] });

@@ -1,10 +1,13 @@
-import { encodePolyline, slice } from './geo.js';
+import { encodePolyline, slice, thin } from './geo.js';
 import { attachLanes, laneCatalog } from './lanes.js';
 import { distinctRoutes, fromOsrm, fromTomTom, fromValhalla } from './providers.js';
 
 const VALHALLA = 'https://valhalla1.openstreetmap.de';
 const LANE_WINDOW = 190000;
 const OSRM = 'https://router.project-osrm.org/route/v1/driving';
+const REFERENCE_POINTS = 1500;
+const FASTER_MIN_SAVING = 180;
+const FASTER_MIN_SHARE = 0.05;
 
 async function getJson(url, init) {
   const res = await fetch(url, init);
@@ -55,6 +58,26 @@ export async function planRoutes(from, to, options = {}) {
     }
   }
   throw lastError || new Error('no route');
+}
+
+export async function fasterRoute(route, along, { avoidTolls, avoidHighways, signal } = {}) {
+  const spacing = Math.max(100, (route.distance - along) / REFERENCE_POINTS);
+  const reference = thin(slice(route.coords, route.cum, along), spacing).map(([lon, lat]) => [+lon.toFixed(5), +lat.toFixed(5)]);
+  const json = await getJson('/api/route', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ reference, avoidTolls, avoidHighways }),
+    signal,
+  });
+  const [current, ...better] = fromTomTom(json);
+  return { current, better };
+}
+
+export function pickFaster({ current, better }) {
+  const best = [...(better || [])].sort((a, b) => a.duration - b.duration)[0];
+  if (!current || !best) return null;
+  const saving = current.duration - best.duration;
+  return saving >= FASTER_MIN_SAVING && saving >= current.duration * FASTER_MIN_SHARE ? { route: best, saving } : null;
 }
 
 export async function loadLanes(route, from = 0) {
