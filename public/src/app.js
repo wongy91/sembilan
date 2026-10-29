@@ -889,6 +889,27 @@ async function promptInstall() {
   render();
 }
 
+function keepStorage() {
+  navigator.storage?.persisted?.().then((kept) => kept || navigator.storage.persist()).catch(() => {});
+}
+
+function copyPlaces() {
+  if (!settings.home && !settings.work && !settings.recents.length) return toast(t('noPlaces'));
+  share(t('placesShareText'), `${location.origin}${location.pathname}#places=${store.exportPlaces(settings)}`);
+}
+
+function importPlacesFrom(text) {
+  const places = store.readPlaces(text);
+  if (!places) return false;
+  const n = (places.home ? 1 : 0) + (places.work ? 1 : 0) + places.recents.length;
+  if (!confirm(t('importConfirm', { n }))) return true;
+  store.importPlaces(settings, places);
+  keepStorage();
+  toast(t('placesAdded'));
+  if (state.mode === 'home') render();
+  return true;
+}
+
 function changeSetting(key, value) {
   settings[key] = value;
   if (key === 'night') settings.nightChosen = true;
@@ -901,6 +922,7 @@ function changeSetting(key, value) {
     fillSettings();
     render();
   }
+  if ((key === 'home' || key === 'work') && value) keepStorage();
   if (key === 'voice') voice.configure({ enabled: value });
   if (key === 'voiceURI') voice.configure({ voiceURI: value });
   if (key === 'night') setTheme();
@@ -929,6 +951,10 @@ function bindUi() {
   $('q').addEventListener('input', () => {
     clearTimeout(timer);
     const query = $('q').value.trim();
+    if (query.includes('#places=') && importPlacesFrom(query)) {
+      $('q').value = '';
+      return endSearch();
+    }
     if (query.length < 2) return hideResults();
     const local = localMatches(query);
     const cached = searchCache.get(cacheKey(query));
@@ -972,6 +998,7 @@ function bindUi() {
     voice.say([{ text: t('voiceTest'), priority: 2 }], { force: true });
   });
   $('btn-install').addEventListener('click', promptInstall);
+  $('btn-copy-places').addEventListener('click', copyPlaces);
 
   $('btn-locate').addEventListener('click', () => {
     if (state.nav) {
@@ -1107,6 +1134,10 @@ function bindUi() {
 }
 
 function openFromUrl() {
+  if (location.hash.startsWith('#places=')) {
+    importPlacesFrom(location.hash);
+    history.replaceState(null, '', location.pathname + location.search);
+  }
   const params = new URLSearchParams(location.search);
   const to = /^(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)$/.exec(params.get('to') || '');
   if (!to) return;
