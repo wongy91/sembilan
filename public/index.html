@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en" data-theme="day">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b3d91">
+  <meta name="description" content="Free navigation for Malaysia: English and Malay voice guidance, speed camera and toll plaza alerts with PLUS fares, R&amp;R, live traffic and community reports.">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Sembilan</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="dns-prefetch" href="https://photon.komoot.io">
+  <link rel="dns-prefetch" href="https://valhalla1.openstreetmap.de">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.6.0/dist/maplibre-gl.css">
+  <link rel="preload" href="fonts/nunito-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="modulepreload" href="src/app.js">
+  <link rel="modulepreload" href="src/map.js">
+  <link rel="modulepreload" href="src/geo.js">
+  <link rel="modulepreload" href="src/icons.js">
+  <link rel="modulepreload" href="src/reports.js">
+  <link rel="modulepreload" href="src/i18n.js">
+  <link rel="modulepreload" href="src/search.js">
+  <link rel="modulepreload" href="src/routing.js">
+  <link rel="modulepreload" href="src/providers.js">
+  <link rel="modulepreload" href="src/navigator.js">
+  <link rel="modulepreload" href="src/instructions.js">
+  <link rel="modulepreload" href="src/pois.js">
+  <link rel="modulepreload" href="src/fares.js">
+  <link rel="modulepreload" href="src/lanes.js">
+  <link rel="modulepreload" href="src/sim.js">
+  <link rel="modulepreload" href="src/store.js">
+  <link rel="modulepreload" href="src/voice.js">
+</head>
+<body data-mode="home">
+  <div id="map"></div>
+
+  <button id="btn-settings" class="fab fab-menu" type="button" data-i18n-label="settings"></button>
+
+  <section id="banner" hidden aria-live="polite">
+    <div id="man-icon"></div>
+    <div class="man-body">
+      <div id="man-dist"></div>
+      <div id="man-text"></div>
+    </div>
+    <div id="man-then" hidden></div>
+    <div id="lanes" hidden></div>
+  </section>
+  <div id="alert" hidden></div>
+  <div id="road-pill" hidden></div>
+
+  <nav id="fabs">
+    <button id="btn-locate" class="fab" type="button" data-i18n-label="recenter"></button>
+  </nav>
+  <button id="btn-report" class="fab fab-report" type="button" hidden data-i18n-label="report"></button>
+  <button id="btn-recenter" class="pill" type="button" hidden data-i18n="recenter"></button>
+  <div id="speedo" hidden><b id="speed">–</b><small data-i18n="kmh"></small></div>
+  <div id="speed-limit" hidden></div>
+  <button id="btn-sound" class="fab fab-sound" type="button" hidden data-i18n-label="voiceGuidance"></button>
+
+  <section id="sheet" class="sheet">
+    <div class="grab"></div>
+    <div id="finder">
+      <form id="searchbox" role="search" autocomplete="off">
+        <span class="search-icon" aria-hidden="true"></span>
+        <input id="q" type="search" enterkeyhint="search" spellcheck="false" data-i18n-placeholder="searchPlaceholder">
+        <button id="btn-clear" class="icon-btn" type="button" hidden data-i18n-label="close"></button>
+      </form>
+      <ul id="results" hidden></ul>
+    </div>
+    <div id="sheet-body"></div>
+  </section>
+
+  <dialog id="dlg-settings" class="dialog">
+    <form method="dialog" class="dialog-body">
+      <header class="dialog-head">
+        <h2 data-i18n="settings"></h2>
+        <button class="icon-btn" value="close" data-i18n-label="close"></button>
+      </header>
+      <label class="row"><span data-i18n="language"></span>
+        <select id="set-lang"><option value="en">English</option><option value="ms">Bahasa Melayu</option></select>
+      </label>
+      <label class="row"><span data-i18n="voiceGuidance"></span><input id="set-voice" type="checkbox" role="switch"></label>
+      <label class="row"><span data-i18n="voice"></span><select id="set-voice-name"></select></label>
+      <button id="set-voice-test" class="btn" type="button" data-i18n="testVoice"></button>
+      <label class="row"><span data-i18n="nightMode"></span>
+        <select id="set-night">
+          <option value="auto" data-i18n="auto"></option>
+          <option value="day" data-i18n="day"></option>
+          <option value="night" data-i18n="night"></option>
+        </select>
+      </label>
+      <label class="row"><span data-i18n="threeDMap"></span><input id="set-3d" type="checkbox" role="switch"></label>
+      <label class="row" id="row-traffic" hidden><span data-i18n="trafficLayer"></span><input id="set-traffic" type="checkbox" role="switch"></label>
+      <label class="row"><span data-i18n="avoidTolls"></span><input id="set-tolls" type="checkbox" role="switch"></label>
+      <label class="row"><span data-i18n="avoidHighways"></span><input id="set-highways" type="checkbox" role="switch"></label>
+      <button id="btn-install" class="btn primary" type="button" hidden data-i18n="install"></button>
+      <p id="install-steps" class="muted small" hidden></p>
+      <h3 data-i18n="about"></h3>
+      <p class="muted" data-i18n="aboutText"></p>
+      <p class="muted small" data-i18n="dataCredits"></p>
+      <p class="small"><a href="https://github.com/wongy91/sembilan" target="_blank" rel="noopener" data-i18n="sourceCode"></a></p>
+    </form>
+  </dialog>
+
+  <dialog id="dlg-report" class="dialog">
+    <form method="dialog" class="dialog-body">
+      <header class="dialog-head">
+        <h2 data-i18n="reportTitle"></h2>
+        <button class="icon-btn" value="close" data-i18n-label="close"></button>
+      </header>
+      <div id="report-grid" class="report-grid"></div>
+    </form>
+  </dialog>
+
+  <div id="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.6.0/dist/maplibre-gl.js"></script>
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>
