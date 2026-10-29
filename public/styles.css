@@ -1396,6 +1396,17 @@ body.nav-alts .sheet {
   margin: 0;
 }
 
+.privacy {
+  display: grid;
+  gap: 4px;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.privacy h3:not(:first-child) {
+  margin-top: 12px;
+}
+
 .row {
   display: flex;
   align-items: center;

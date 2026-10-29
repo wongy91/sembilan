@@ -8,6 +8,7 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 - Errors that happen in the app are reported to the Worker's logs, so problems show up without a screenshot. Coordinates, IP addresses and web-address details are removed first, and at most five reports are sent per visit.
 - Links shared on WhatsApp and social apps show a preview card with the Sembilan logo and "Free navigation for Malaysia".
+- A **Privacy** screen in Settings, in English and Malay, explains what stays on your phone, what is sent to which service, and how long anything is kept.
 
 ### Changed
 

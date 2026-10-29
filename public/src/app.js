@@ -114,6 +114,8 @@ function setTheme() {
   map?.setNight(night);
 }
 
+const PRIVACY_SECTIONS = ['Account', 'Phone', 'Trips', 'Reports', 'Errors', 'Hosting'];
+
 function applyTexts() {
   document.documentElement.lang = getLang();
   for (const node of document.querySelectorAll('[data-i18n]')) node.textContent = t(node.dataset.i18n);
@@ -122,6 +124,7 @@ function applyTexts() {
     node.setAttribute('aria-label', t(node.dataset.i18nLabel));
     node.title = t(node.dataset.i18nLabel);
   }
+  $('privacy-body').innerHTML = PRIVACY_SECTIONS.map((k) => `<h3>${esc(t(`privacy${k}Title`))}</h3><p>${esc(t(`privacy${k}`))}</p>`).join('');
   $('report-grid').innerHTML = REPORT_KINDS.map(
     (k) => `<button type="button" class="report-kind" data-kind="${k}"><span>${REPORT_ICON[k]}</span>${esc(t(k))}</button>`,
   ).join('');
@@ -1299,6 +1302,7 @@ function bindUi() {
   });
   $('install-copy').addEventListener('click', () => share(t('installTitle'), `${location.origin}/`));
   $('btn-copy-places').addEventListener('click', copyPlaces);
+  $('btn-privacy').addEventListener('click', () => $('dlg-privacy').showModal());
   $('dlg-save').addEventListener('close', closeSaveDialog);
   $('update-later').innerHTML = UI.close;
   $('update-restart').addEventListener('click', () => location.reload());
