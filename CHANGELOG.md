@@ -4,6 +4,10 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+### Added
+
+- New app icon: the 9's loop holds a navigation arrow, on a blue map-style gradient. Full-bleed icons for iPhone and for Android's round masks.
+
 ### Changed
 
 - The 3D buildings setting now also applies while navigating: the driving view tilts and shows buildings in 3D. Turning it on or off mid-drive takes effect immediately.

@@ -6,6 +6,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const root = fileURLToPath(new URL('../public/', import.meta.url));
 const template = fileURLToPath(new URL('./sw.template.js', import.meta.url));
 const CACHEABLE = /\.(html|css|js|json|webmanifest|svg|png|woff2)$/;
+const INSTALL_ONLY = new Set(['icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png']);
 
 async function listFiles(dir) {
   const out = [];
@@ -20,7 +21,7 @@ async function listFiles(dir) {
 export async function stampedServiceWorker() {
   const source = await readFile(template, 'utf8');
   const { version } = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
-  const files = (await listFiles(root)).filter((p) => p !== 'sw.js' && CACHEABLE.test(p)).sort();
+  const files = (await listFiles(root)).filter((p) => p !== 'sw.js' && CACHEABLE.test(p) && !INSTALL_ONLY.has(p)).sort();
   const hash = createHash('sha256');
   for (const p of files) hash.update(p).update(await readFile(join(root, p)));
   const shell = ['./', ...files].map((p) => `  '${p}',`).join('\n');

@@ -1,6 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#0b3d91"/>
-  <path d="M96 470 L216 300 L296 300 L416 470 Z" fill="#14509f"/>
-  <circle cx="256" cy="200" r="86" fill="none" stroke="#ffcc00" stroke-width="62"/>
-  <path d="M342 200 V286 C342 368 296 410 214 414" fill="none" stroke="#ffcc00" stroke-width="62" stroke-linecap="round"/>
+  <defs>
+    <linearGradient id="sb-bg" x1="0" y1="0" x2="180" y2="512" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1d72ff"/><stop offset="1" stop-color="#0a2577"/></linearGradient>
+    <linearGradient id="sb-gold" x1="0" y1="72" x2="0" y2="466" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#ffe46b"/><stop offset="0.55" stop-color="#ffc21a"/><stop offset="1" stop-color="#ffa800"/></linearGradient>
+    <radialGradient id="sb-shine" cx="0.22" cy="0.12" r="0.85"><stop offset="0" stop-color="#fff" stop-opacity=".24"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    <filter id="sb-shadow" x="-25%" y="-20%" width="150%" height="150%"><feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#00103d" flood-opacity=".5"/></filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#sb-bg)"/>
+  <g fill="none" stroke="#fff" stroke-opacity=".09" stroke-width="14" stroke-linecap="round"><path d="M-20 362 C120 332 200 422 330 382 S470 302 540 332"/><path d="M92 -20 C132 140 62 260 122 540"/><path d="M420 -20 C380 120 470 230 430 540"/></g>
+  <rect width="512" height="512" rx="112" fill="url(#sb-shine)"/>
+  <path fill="url(#sb-gold)" fill-rule="evenodd" filter="url(#sb-shadow)" d="M256 72 A134 134 0 0 1 390 206 C390 334 318 432 176 466 C246 424 296 378 327.0 319.6 A134 134 0 1 1 256 72 Z M256 144 A62 62 0 1 0 256 268 A62 62 0 1 0 256 144 Z"/><path d="M256 162 L292 248 L256 230 L220 248 Z" fill="#fff" stroke="#fff" stroke-width="8" stroke-linejoin="round"/>
 </svg>
