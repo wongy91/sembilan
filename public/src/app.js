@@ -535,7 +535,6 @@ function startNav(simulated) {
   state.mode = 'nav';
   state.following = true;
   if (!isIOS && onPhone() && !installed() && !document.fullscreenElement) document.documentElement.requestFullscreen?.({ navigationUI: 'hide' })?.catch(() => {});
-  map.set3D(false);
   map.showPin([state.place.lon, state.place.lat]);
   map.showRoutes([route], 0);
   map.setPois(basePois);
@@ -568,7 +567,6 @@ function finishNav(arrived) {
   map.setCallout(null);
   document.body.classList.remove('nav-more-open', 'has-lanes');
   goHome();
-  map.set3D(settings.threeD);
   map.stopDrive();
   map.resetCamera();
   if (arrived) {
