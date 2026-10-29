@@ -877,7 +877,7 @@ function fillSettings() {
   $('set-voice-name').value = voices.some((v) => v.voiceURI === settings.voiceURI) ? settings.voiceURI : '';
   $('install-steps').hidden = !installSteps || installed();
   if (installSteps) $('install-steps').innerHTML = `<b>${esc(t('installTitle'))}</b><br>${installStepsText()}`;
-  $('app-version').textContent = state.version ? t('version', { v: state.version }) : '';
+  $('app-version').textContent = state.version ? t('version', { v: state.version.release, build: state.version.build }) : '';
 }
 
 async function promptInstall() {
@@ -1137,7 +1137,7 @@ if ('serviceWorker' in navigator) {
   const updating = !!sw.controller;
   sw.addEventListener('controllerchange', () => (state.updateReady = updating));
   sw.addEventListener('message', (e) => {
-    if (e.data?.version) state.version ??= e.data.version.replace('sembilan-', '').slice(0, 7);
+    if (e.data?.release) state.version ??= e.data;
   });
   sw.register('sw.js').catch(() => {});
   if (sw.controller) sw.controller.postMessage('version');

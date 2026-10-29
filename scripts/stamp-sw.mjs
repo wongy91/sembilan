@@ -19,11 +19,13 @@ async function listFiles(dir) {
 
 export async function stampedServiceWorker() {
   const source = await readFile(template, 'utf8');
+  const { version } = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
   const files = (await listFiles(root)).filter((p) => p !== 'sw.js' && CACHEABLE.test(p)).sort();
   const hash = createHash('sha256');
   for (const p of files) hash.update(p).update(await readFile(join(root, p)));
   const shell = ['./', ...files].map((p) => `  '${p}',`).join('\n');
   return source
+    .replace(/const RELEASE = '[^']*';/, `const RELEASE = '${version}';`)
     .replace(/const VERSION = '[^']*';/, `const VERSION = 'sembilan-${hash.digest('hex').slice(0, 12)}';`)
     .replace(/const SHELL = \[[^\]]*\];/, `const SHELL = [\n${shell}\n];`);
 }
