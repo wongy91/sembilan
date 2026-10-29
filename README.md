@@ -111,6 +111,8 @@ For live traffic, create a free key at [developer.tomtom.com](https://developer.
 
 Run `npm run data:places` before your first deploy if you want business search; the first upload of the index is about 170 MB, and later deploys only upload files that changed.
 
+Shared links show a preview card from the `og:` tags in `public/index.html`. In a fork, change `og:url` and `og:image` to your own address; `scripts/social-preview.html` is the source of the preview image.
+
 To host on any static host instead, run `node scripts/stamp-sw.mjs` and upload `public/`. Live traffic, reports, fares and business search need the Worker.
 
 ## Configuration

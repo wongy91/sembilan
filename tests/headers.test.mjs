@@ -5,7 +5,7 @@ import { headersFor, parseHeaders } from '../scripts/headers.mjs';
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const rules = parseHeaders(read('public/_headers'));
-const LINK_ONLY = new Set(['https://github.com', 'https://waze.com', 'https://www.google.com']);
+const LINK_ONLY = new Set(['https://github.com', 'https://waze.com', 'https://www.google.com', 'https://sembilan.nav9.workers.dev']);
 
 function policy(path) {
   const header = headersFor(rules, path)['Content-Security-Policy'];
