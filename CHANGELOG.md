@@ -4,6 +4,13 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-10-29
+
+### Changed
+
+- A polished report button: an orange circle with a white speech-bubble icon.
+- The navigation panel has four one-line actions (Routes, Overview, Sound, Share) and a separate, full-width **End trip** button.
+
 ## [0.9.0] - 2026-10-29
 
 ### Added
@@ -124,7 +131,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.9.0...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.9.1...HEAD
+[0.9.1]: https://github.com/wongy91/sembilan/compare/0.9.0...0.9.1
 [0.9.0]: https://github.com/wongy91/sembilan/compare/0.8.1...0.9.0
 [0.8.1]: https://github.com/wongy91/sembilan/compare/0.8.0...0.8.1
 [0.8.0]: https://github.com/wongy91/sembilan/compare/0.7.0...0.8.0
