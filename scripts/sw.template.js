@@ -56,6 +56,10 @@ async function staleWhileRevalidate(request) {
   return hit || (await update) || Response.error();
 }
 
+self.addEventListener('message', (event) => {
+  if (event.data === 'version') event.source?.postMessage({ version: VERSION });
+});
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
