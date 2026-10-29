@@ -4,6 +4,8 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-10-29
+
 ### Changed
 
 - The arrival time and time left while driving now follow live traffic. Every 5 minutes TomTom re-times the rest of your route, so a jam that builds up after you set off shows in the ETA (for example 28 → 43 min), as do Share ETA and the current route in **Routes**.
@@ -172,7 +174,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.12.0...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.13.0...HEAD
+[0.13.0]: https://github.com/wongy91/sembilan/compare/0.12.0...0.13.0
 [0.12.0]: https://github.com/wongy91/sembilan/compare/0.11.0...0.12.0
 [0.11.0]: https://github.com/wongy91/sembilan/compare/0.10.0...0.11.0
 [0.10.0]: https://github.com/wongy91/sembilan/compare/0.9.1...0.10.0
