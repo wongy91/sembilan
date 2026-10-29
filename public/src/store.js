@@ -12,6 +12,7 @@ const DEFAULTS = {
   home: null,
   work: null,
   recents: [],
+  saved: [],
   sheetCollapsed: false,
 };
 
@@ -39,6 +40,26 @@ export function remember(state, place) {
   save(state);
 }
 
+const MAX_SAVED = 50;
+
+export function findSaved(state, place) {
+  return state.saved.find((s) => samePlace(s, place)) || null;
+}
+
+export function savePlace(state, place, label) {
+  const entry = { label: String(label ?? '').trim().slice(0, 60) || place.name, name: place.name, sub: place.sub || '', lon: place.lon, lat: place.lat };
+  const i = state.saved.findIndex((s) => samePlace(s, place));
+  if (i >= 0) state.saved[i] = entry;
+  else state.saved = [entry, ...state.saved].slice(0, MAX_SAVED);
+  save(state);
+  return entry;
+}
+
+export function removeSaved(state, place) {
+  state.saved = state.saved.filter((s) => !samePlace(s, place));
+  save(state);
+}
+
 function cleanPlace(p) {
   const lon = Number(p?.lon);
   const lat = Number(p?.lat);
@@ -47,7 +68,7 @@ function cleanPlace(p) {
 }
 
 export function exportPlaces(state) {
-  const bytes = new TextEncoder().encode(JSON.stringify({ v: 1, home: state.home, work: state.work, recents: state.recents }));
+  const bytes = new TextEncoder().encode(JSON.stringify({ v: 1, home: state.home, work: state.work, recents: state.recents, saved: state.saved }));
   return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
@@ -58,8 +79,15 @@ export function readPlaces(text) {
     const binary = atob(match[1].replace(/-/g, '+').replace(/_/g, '/'));
     const data = JSON.parse(new TextDecoder().decode(Uint8Array.from(binary, (c) => c.charCodeAt(0))));
     const recents = (Array.isArray(data.recents) ? data.recents : []).map(cleanPlace).filter(Boolean).slice(0, 8);
-    const places = { home: cleanPlace(data.home), work: cleanPlace(data.work), recents };
-    return places.home || places.work || recents.length ? places : null;
+    const saved = (Array.isArray(data.saved) ? data.saved : [])
+      .map((s) => {
+        const p = cleanPlace(s);
+        return p && { ...p, label: String(s.label ?? '').trim().slice(0, 60) || p.name };
+      })
+      .filter(Boolean)
+      .slice(0, MAX_SAVED);
+    const places = { home: cleanPlace(data.home), work: cleanPlace(data.work), recents, saved };
+    return places.home || places.work || recents.length || saved.length ? places : null;
   } catch {
     return null;
   }
@@ -69,5 +97,7 @@ export function importPlaces(state, places) {
   if (places.home) state.home = places.home;
   if (places.work) state.work = places.work;
   state.recents = [...places.recents, ...state.recents.filter((p) => !places.recents.some((q) => samePlace(p, q)))].slice(0, 8);
+  const saved = places.saved || [];
+  state.saved = [...saved, ...(state.saved || []).filter((p) => !saved.some((q) => samePlace(p, q)))].slice(0, MAX_SAVED);
   save(state);
 }

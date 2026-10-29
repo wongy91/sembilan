@@ -20,8 +20,8 @@ Free, open-source turn-by-turn navigation for Malaysia that runs in the browser.
 | Search | Places and street addresses with the distance to each. Nearby ⛽ petrol, 🍜 food, 🅿️ parking and 🔌 EV charging, also while driving. Addresses use TomTom when a key is set |
 | Map | Day and night themes (automatic by time), 2D or 3D buildings, long-press to drop a pin |
 | While driving | Speedometer with speed-limit sign, current street name, quick mute, search and settings, share ETA, arrival screen, screen stays awake |
-| Saved places | Home, Work and recent places, kept on your phone. **Copy my places** makes a private link that adds them on another phone or in the home-screen app |
-| Offline and install | Opens instantly from an offline copy; install it to the home screen (Android, iPhone) or the Dock (Mac Safari) |
+| Saved places | Home, Work, your own named places (⭐ Save on any place) and recent places, kept on your phone. **Copy my places** makes a private link that adds them on another phone or in the home-screen app |
+| Offline and install | Opens instantly from an offline copy; install it to the home screen (Android, iPhone) or the Dock (Mac Safari). When a new version is ready, a small Restart prompt appears; it never interrupts navigation |
 
 ## Quick start
 

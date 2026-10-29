@@ -241,8 +241,13 @@ function homeSheet() {
     )
     .join('');
   const install = offerInstall() && !settings.installDismissed ? installCard() : '';
-  return `${install}<div class="shortcuts">${shortcut('home')}${shortcut('work')}</div>${
-    recents ? `<h3 class="label">${esc(t('recent'))}</h3>${recents}` : `<p class="muted hint small">${esc(t('hint'))}</p>`
+  const shown = state.showAllSaved ? settings.saved : settings.saved.slice(0, 5);
+  const saved = shown
+    .map((s, i) => `<button class="list-item" data-action="fav" data-i="${i}"><span class="li-icon">⭐</span><span><b>${esc(s.label)}</b><small>${esc(s.label !== s.name ? s.name : s.sub)}</small></span></button>`)
+    .join('');
+  const more = shown.length < settings.saved.length ? `<button class="list-more" data-action="fav-all">${esc(t('showAll', { n: settings.saved.length }))}</button>` : '';
+  return `${install}<div class="shortcuts">${shortcut('home')}${shortcut('work')}</div>${saved ? `<h3 class="label">${esc(t('savedPlaces'))}</h3>${saved}${more}` : ''}${
+    recents ? `<h3 class="label">${esc(t('recent'))}</h3>${recents}` : saved ? '' : `<p class="muted hint small">${esc(t('hint'))}</p>`
   }`;
 }
 
@@ -256,6 +261,7 @@ function placeSheet() {
     <div class="quick-actions">
       <button class="quick" data-action="set-home"><span>🏠</span>${esc(t('setHome'))}</button>
       <button class="quick" data-action="set-work"><span>💼</span>${esc(t('setWork'))}</button>
+      ${store.findSaved(settings, p) ? `<button class="quick on" data-action="save-place"><span>★</span>${esc(t('saved'))}</button>` : `<button class="quick" data-action="save-place"><span>☆</span>${esc(t('save'))}</button>`}
       <button class="quick" data-action="share-place"><span>${UI.share}</span>${esc(t('share'))}</button>
     </div>`;
 }
@@ -491,7 +497,7 @@ function showResults(items) {
     .map((p, i) =>
       p.msg
         ? `<li class="msg">${esc(p.msg)}</li>`
-        : `<li><button type="button" data-i="${i}"><span><b>${p.local ? `${{ home: '🏠', work: '💼' }[p.tag] || '🕘'} ` : ''}${esc(p.name)}</b><small>${esc(p.sub)}</small></span>${Number.isFinite(p.dist) ? `<em>${esc(fmtDistance(p.dist))}</em>` : ''}</button></li>`,
+        : `<li><button type="button" data-i="${i}"><span><b>${p.local ? `${{ home: '🏠', work: '💼', saved: '⭐' }[p.tag] || '🕘'} ` : ''}${esc(p.name)}</b><small>${esc(p.sub)}</small></span>${Number.isFinite(p.dist) ? `<em>${esc(fmtDistance(p.dist))}</em>` : ''}</button></li>`,
     )
     .join('');
   ul.hidden = false;
@@ -504,8 +510,9 @@ const cacheKey = (query) => `${getLang()}|${query.toLowerCase()}`;
 function localMatches(query) {
   const q = query.toLowerCase();
   const saved = ['home', 'work'].filter((k) => settings[k]).map((k) => ({ ...settings[k], tag: k }));
+  const favs = settings.saved.map((s) => ({ name: s.label, sub: s.label !== s.name ? s.name : s.sub, lon: s.lon, lat: s.lat, tag: 'saved' }));
   const seen = new Set();
-  return [...saved, ...settings.recents]
+  return [...saved, ...favs, ...settings.recents]
     .filter((p) => `${p.name} ${p.sub}`.toLowerCase().includes(q))
     .filter((p) => {
       const key = `${p.lon.toFixed(4)},${p.lat.toFixed(4)}`;
@@ -752,6 +759,7 @@ function finishNav(arrived) {
     map.showPin([nav.dest.lon, nav.dest.lat]);
     render();
   }
+  offerUpdate();
   if (state.fix) {
     map.setUser([state.fix.lon, state.fix.lat], state.fix.heading, false);
     map.flyTo([state.fix.lon, state.fix.lat], 15);
@@ -1068,20 +1076,57 @@ function keepStorage() {
 }
 
 function copyPlaces() {
-  if (!settings.home && !settings.work && !settings.recents.length) return toast(t('noPlaces'));
+  if (!settings.home && !settings.work && !settings.recents.length && !settings.saved.length) return toast(t('noPlaces'));
   share(t('placesShareText'), `${location.origin}${location.pathname}#places=${store.exportPlaces(settings)}`);
 }
 
 function importPlacesFrom(text) {
   const places = store.readPlaces(text);
   if (!places) return false;
-  const n = (places.home ? 1 : 0) + (places.work ? 1 : 0) + places.recents.length;
+  const n = (places.home ? 1 : 0) + (places.work ? 1 : 0) + places.recents.length + places.saved.length;
   if (!confirm(t('importConfirm', { n }))) return true;
   store.importPlaces(settings, places);
   keepStorage();
   toast(t('placesAdded'));
   if (state.mode === 'home') render();
   return true;
+}
+
+function openSaveDialog(place) {
+  const saved = store.findSaved(settings, place);
+  state.saveTarget = place;
+  $('save-title').textContent = t(saved ? 'editSaved' : 'savePlace');
+  $('save-name').value = saved ? saved.label : place.name;
+  $('save-sub').textContent = [saved && saved.label !== place.name ? place.name : '', place.sub].filter(Boolean).join(' · ');
+  $('save-remove').hidden = !saved;
+  $('dlg-save').returnValue = '';
+  $('dlg-save').showModal();
+}
+
+function closeSaveDialog() {
+  const place = state.saveTarget;
+  state.saveTarget = null;
+  const action = $('dlg-save').returnValue;
+  if (!place || !action) return;
+  if (action === 'save') {
+    store.savePlace(settings, place, $('save-name').value);
+    keepStorage();
+    toast(t('placeSaved'));
+  } else if (action === 'remove') {
+    store.removeSaved(settings, place);
+    toast(t('placeRemoved'));
+  }
+  render();
+}
+
+async function offerUpdate() {
+  if (!state.updateReady || state.updateDeclined || state.nav || !$('update').hidden) return;
+  let release = '';
+  try {
+    release = /RELEASE = '([^']+)'/.exec(await (await fetch('src/version.js')).text())?.[1] || '';
+  } catch {}
+  $('update-text').textContent = t('updateReady', { v: release }).replace('  ', ' ');
+  $('update').hidden = false;
 }
 
 function changeSetting(key, value) {
@@ -1173,6 +1218,14 @@ function bindUi() {
   });
   $('btn-install').addEventListener('click', promptInstall);
   $('btn-copy-places').addEventListener('click', copyPlaces);
+  $('dlg-save').addEventListener('close', closeSaveDialog);
+  $('update-later').innerHTML = UI.close;
+  $('update-restart').addEventListener('click', () => location.reload());
+  $('update-later').addEventListener('click', () => {
+    state.updateDeclined = true;
+    $('update').hidden = true;
+  });
+  $('save-cancel').addEventListener('click', () => $('dlg-save').close(''));
 
   $('btn-locate').addEventListener('click', () => {
     if (state.nav) {
@@ -1260,6 +1313,15 @@ function bindUi() {
         return settings[target.dataset.key] ? selectPlace(settings[target.dataset.key]) : toast(t('setHint'));
       case 'recent':
         return selectPlace(settings.recents[i]);
+      case 'fav': {
+        const s = settings.saved[i];
+        return s && selectPlace({ name: s.label, sub: s.label !== s.name ? s.name : s.sub, lon: s.lon, lat: s.lat });
+      }
+      case 'fav-all':
+        state.showAllSaved = true;
+        return render();
+      case 'save-place':
+        return openSaveDialog(state.place);
       case 'close':
         return state.mode === 'routes' ? (map.clearRoutes(), (state.mode = 'place'), render()) : goHome();
       case 'directions':
@@ -1328,7 +1390,7 @@ function bindUi() {
   });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') {
-      if (state.updateReady && !state.nav) location.reload();
+      if (state.updateReady && !state.updateDeclined && !state.nav) location.reload();
       return;
     }
     setTheme();
@@ -1382,6 +1444,9 @@ health().then((backend) => {
 });
 if ('serviceWorker' in navigator) {
   const updating = !!navigator.serviceWorker.controller;
-  navigator.serviceWorker.addEventListener('controllerchange', () => (state.updateReady = updating));
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    state.updateReady = updating;
+    offerUpdate();
+  });
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }

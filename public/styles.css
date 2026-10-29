@@ -763,7 +763,7 @@ body[data-mode='nav'] .grab {
 
 .quick-actions {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 8px;
   margin-top: 14px;
 }
@@ -778,6 +778,47 @@ body[data-mode='nav'] .grab {
   background: var(--field);
   font-size: 13px;
   font-weight: 800;
+}
+
+.quick.on {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.list-more {
+  padding: 10px 2px;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-weight: 800;
+  text-align: left;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  font-weight: 700;
+}
+
+.field input {
+  min-height: 48px;
+  padding: 0 14px;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  background: var(--field);
+  font: inherit;
+  font-weight: 700;
+  color: inherit;
+  outline: none;
+}
+
+.field input:focus {
+  border-color: var(--accent);
+}
+
+.btn.danger {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
 }
 
 .quick > span {
@@ -1281,6 +1322,63 @@ body.nav-alts .sheet {
   font-weight: 800;
   box-shadow: var(--shadow-lg);
   z-index: 5;
+}
+
+#update {
+  position: fixed;
+  top: calc(var(--safe-top) + 14px);
+  left: 78px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 6px 6px 6px 16px;
+  border-radius: 26px;
+  background: #12203a;
+  color: #fff;
+  font-weight: 800;
+  box-shadow: var(--shadow-lg);
+  z-index: 4;
+  animation: drop 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+#update span {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+}
+
+#update .btn {
+  flex: none;
+  min-height: 40px;
+  padding: 0 16px;
+  box-shadow: none;
+}
+
+#update .icon-btn {
+  width: 40px;
+  height: 40px;
+  color: #fff;
+}
+
+#update .icon-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+@keyframes drop {
+  from {
+    transform: translateY(-12px);
+    opacity: 0;
+  }
+}
+
+@media (min-width: 900px) {
+  #update {
+    left: auto;
+    width: 400px;
+  }
 }
 
 .maplibregl-ctrl-bottom-left {

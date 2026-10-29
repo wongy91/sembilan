@@ -118,6 +118,19 @@
     </form>
   </dialog>
 
+  <dialog id="dlg-save" class="dialog">
+    <form method="dialog" class="dialog-body">
+      <header class="dialog-head">
+        <h2 id="save-title"></h2>
+        <button class="icon-btn" type="button" id="save-cancel" data-i18n-label="close"></button>
+      </header>
+      <label class="field"><span data-i18n="placeName"></span><input id="save-name" maxlength="60" autocomplete="off" enterkeyhint="done" autofocus></label>
+      <p id="save-sub" class="muted small"></p>
+      <button class="btn primary" value="save" data-i18n="save"></button>
+      <button id="save-remove" class="btn danger" value="remove" data-i18n="removeSaved" hidden></button>
+    </form>
+  </dialog>
+
   <dialog id="dlg-report" class="dialog">
     <form method="dialog" class="dialog-body">
       <header class="dialog-head">
@@ -129,6 +142,11 @@
   </dialog>
 
   <div id="toast" role="status" aria-live="polite" hidden></div>
+  <div id="update" role="status" aria-live="polite" hidden>
+    <span id="update-text"></span>
+    <button id="update-restart" class="btn primary" type="button" data-i18n="restart"></button>
+    <button id="update-later" class="icon-btn" type="button" data-i18n-label="later"></button>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.6.0/dist/maplibre-gl.js"></script>
   <script type="module" src="src/app.js"></script>
