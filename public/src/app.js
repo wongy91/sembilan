@@ -1149,6 +1149,10 @@ function closeSaveDialog() {
   render();
 }
 
+function checkForUpdate() {
+  navigator.serviceWorker?.getRegistration().then((reg) => reg?.update()).catch(() => {});
+}
+
 async function offerUpdate() {
   if (!state.updateReady || state.updateDeclined || state.nav || !$('update').hidden) return;
   let release = '';
@@ -1427,6 +1431,7 @@ function bindUi() {
       if (state.updateReady && !state.updateDeclined && !state.nav) location.reload();
       return;
     }
+    checkForUpdate();
     setTheme();
     if (state.nav) acquireWakeLock();
   });
@@ -1477,10 +1482,12 @@ health().then((backend) => {
   map.ready.then(refreshReports);
 });
 if ('serviceWorker' in navigator) {
-  const updating = !!navigator.serviceWorker.controller;
+  let installedBefore = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    state.updateReady = updating;
+    state.updateReady = installedBefore;
+    installedBefore = true;
     offerUpdate();
   });
   navigator.serviceWorker.register('sw.js').catch(() => {});
+  setInterval(checkForUpdate, 30 * 60 * 1000);
 }
