@@ -424,8 +424,8 @@ body[data-mode='home']:not(.searching) .sheet {
   touch-action: none;
 }
 
-body.sheet-collapsed[data-mode='home']:not(.searching) #sheet-body {
-  display: none;
+body[data-mode='home'] .sheet {
+  will-change: transform;
 }
 
 body[data-mode='nav'] .grab {

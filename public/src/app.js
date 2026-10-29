@@ -144,7 +144,6 @@ let renderedMode = null;
 
 function render() {
   document.body.dataset.mode = state.mode;
-  document.body.classList.toggle('sheet-collapsed', settings.sheetCollapsed);
   const body = $('sheet-body');
   body.innerHTML = { home: homeSheet, place: placeSheet, routes: routesSheet, nav: navSheet, arrived: arrivedSheet }[state.mode]();
   $('finder').hidden = !(state.mode === 'home' || state.navSearch);
@@ -155,13 +154,59 @@ function render() {
     void body.offsetWidth;
     body.classList.add('enter');
   }
-  measureSheet();
+  syncSlide();
 }
 
 function measureSheet() {
   const sheet = $('sheet');
-  const height = !sheet.hidden && window.innerWidth < 900 ? sheet.offsetHeight : 0;
+  const height = !sheet.hidden && window.innerWidth < 900 ? sheet.offsetHeight - slide.offset : 0;
   document.documentElement.style.setProperty('--sheet-h', `${height}px`);
+}
+
+const slide = { offset: 0, max: 0, from: null, base: 0, moved: false, lastY: 0, lastT: 0, speed: 0, raf: 0 };
+
+const homeSlides = () => state.mode === 'home' && !document.body.classList.contains('searching') && window.innerWidth < 900;
+
+function collapseDistance() {
+  const sheet = $('sheet');
+  const finder = $('finder');
+  const padding = parseFloat(getComputedStyle(sheet).paddingBottom) || 0;
+  return Math.max(0, sheet.offsetHeight - (finder.offsetTop + finder.offsetHeight) - padding);
+}
+
+function setSlide(offset) {
+  slide.offset = offset;
+  const body = $('sheet-body');
+  $('sheet').style.transform = offset ? `translateY(${offset}px)` : '';
+  body.style.opacity = offset && slide.max ? String(Math.max(0, 1 - (offset / slide.max) * 1.4)) : '';
+  body.style.pointerEvents = offset && offset >= slide.max - 1 ? 'none' : '';
+  measureSheet();
+}
+
+function syncSlide() {
+  cancelAnimationFrame(slide.raf);
+  slide.raf = 0;
+  slide.max = homeSlides() ? collapseDistance() : 0;
+  setSlide(slide.max && settings.sheetCollapsed ? slide.max : 0);
+}
+
+function animateSlide(to) {
+  cancelAnimationFrame(slide.raf);
+  const from = slide.offset;
+  const start = performance.now();
+  const step = (now) => {
+    const k = Math.min(1, (now - start) / 260);
+    setSlide(from + (to - from) * (1 - (1 - k) ** 3));
+    slide.raf = k < 1 ? requestAnimationFrame(step) : 0;
+  };
+  slide.raf = requestAnimationFrame(step);
+}
+
+function collapseHome(collapsed) {
+  if (!homeSlides()) return;
+  if (settings.sheetCollapsed !== collapsed) changeSetting('sheetCollapsed', collapsed);
+  slide.max = collapseDistance();
+  animateSlide(collapsed ? slide.max : 0);
 }
 
 function shortcut(key) {
@@ -291,13 +336,6 @@ function toggleVoice() {
   if (tile) tile.innerHTML = soundTile();
 }
 
-function collapseHome(collapsed) {
-  if (settings.sheetCollapsed === collapsed) return;
-  changeSetting('sheetCollapsed', collapsed);
-  document.body.classList.toggle('sheet-collapsed', collapsed);
-  measureSheet();
-}
-
 function toggleMore() {
   const more = $('nav-more');
   if (!more) return;
@@ -336,7 +374,7 @@ function endSearch() {
   hideResults();
   $('btn-clear').hidden = !$('q').value;
   $('q').blur();
-  measureSheet();
+  syncSlide();
 }
 
 function showResults(items) {
@@ -954,7 +992,7 @@ function bindUi() {
   $('q').addEventListener('focus', () => {
     document.body.classList.add('searching');
     $('btn-clear').hidden = false;
-    measureSheet();
+    syncSlide();
   });
   $('q').addEventListener('input', () => {
     clearTimeout(timer);
@@ -1032,18 +1070,37 @@ function bindUi() {
   });
   let swipeFrom = null;
   $('sheet').addEventListener('pointerdown', (e) => {
-    const homePanel = state.mode === 'home' && !document.body.classList.contains('searching');
-    swipeFrom = state.mode === 'nav' || homePanel ? e.clientY : null;
+    swipeFrom = state.mode === 'nav' ? e.clientY : null;
+    if (!homeSlides()) return;
+    Object.assign(slide, { from: e.clientY, base: slide.offset, moved: false, lastY: e.clientY, lastT: e.timeStamp, speed: 0, max: collapseDistance() });
   });
+  window.addEventListener('pointermove', (e) => {
+    if (slide.from == null) return;
+    const dy = e.clientY - slide.from;
+    if (!slide.moved) {
+      if (Math.abs(dy) < 6) return;
+      slide.moved = true;
+      cancelAnimationFrame(slide.raf);
+    }
+    if (e.timeStamp > slide.lastT) slide.speed = (e.clientY - slide.lastY) / (e.timeStamp - slide.lastT);
+    slide.lastY = e.clientY;
+    slide.lastT = e.timeStamp;
+    setSlide(Math.min(slide.max, Math.max(0, slide.base + dy)));
+  });
+  const endSlide = (e) => {
+    if (slide.from == null) return;
+    slide.from = null;
+    if (!slide.moved) return;
+    state.swipedAt = Date.now();
+    const speed = e.timeStamp - slide.lastT > 120 ? 0 : slide.speed;
+    collapseHome(speed > 0.4 || (speed > -0.4 && slide.offset > slide.max / 2));
+  };
+  window.addEventListener('pointerup', endSlide);
+  window.addEventListener('pointercancel', endSlide);
   window.addEventListener('pointerup', (e) => {
     if (swipeFrom == null) return;
     const dy = e.clientY - swipeFrom;
     swipeFrom = null;
-    if (state.mode === 'home') {
-      if (Math.abs(dy) < 30 || (dy > 0 && $('sheet').scrollTop > 0)) return;
-      state.swipedAt = Date.now();
-      return collapseHome(dy > 0);
-    }
     const more = $('nav-more');
     if (more && ((dy < -30 && more.hidden) || (dy > 30 && !more.hidden))) {
       state.swipedAt = Date.now();
@@ -1135,7 +1192,7 @@ function bindUi() {
     setTheme();
     if (state.nav) acquireWakeLock();
   });
-  new ResizeObserver(measureSheet).observe($('sheet'));
+  new ResizeObserver(() => slide.from == null && !slide.raf && syncSlide()).observe($('sheet'));
   window.addEventListener('resize', measureSheet);
   window.addEventListener('offline', () => toast(t('offline')));
   window.addEventListener('beforeinstallprompt', (e) => {
