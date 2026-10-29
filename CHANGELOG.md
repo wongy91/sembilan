@@ -4,6 +4,12 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-10-29
+
+### Changed
+
+- The home panel slides with your finger instead of jumping between open and collapsed. Let go and it glides to whichever is closer, or follows a quick flick. The map buttons move with it.
+
 ## [0.4.1] - 2026-10-29
 
 ### Fixed
@@ -71,7 +77,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.4.1...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.4.2...HEAD
+[0.4.2]: https://github.com/wongy91/sembilan/compare/0.4.1...0.4.2
 [0.4.1]: https://github.com/wongy91/sembilan/compare/0.4.0...0.4.1
 [0.4.0]: https://github.com/wongy91/sembilan/compare/0.3.2...0.4.0
 [0.3.2]: https://github.com/wongy91/sembilan/compare/0.3.1...0.3.2
