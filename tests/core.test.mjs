@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { bearing, cumulative, decodePolyline, haversine, locate, pointAt, sideOf, slice } from '../public/src/geo.js';
+import { bearing, cumulative, decodePolyline, encodePolyline, haversine, locate, pointAt, sideOf, slice } from '../public/src/geo.js';
 import { instruction, spokenDistance, withDistance } from '../public/src/instructions.js';
 import { fromOsrm, fromTomTom, fromValhalla, distinctRoutes } from '../public/src/providers.js';
 import { poisAlongRoute, reportPois, summarize } from '../public/src/pois.js';
@@ -14,6 +14,9 @@ const pois = JSON.parse(readFileSync(new URL('../public/data/pois.json', import.
 test('decodes Google polyline example at precision 5', () => {
   const pts = decodePolyline('_p~iF~ps|U_ulLnnqC_mqNvxq`@', 5);
   assert.deepEqual(pts, [[-120.2, 38.5], [-120.95, 40.7], [-126.453, 43.252]]);
+  assert.equal(encodePolyline(pts, 5), '_p~iF~ps|U_ulLnnqC_mqNvxq`@');
+  const kl = [[101.7117, 3.1579], [101.700012, 3.160098], [101.6776, 3.1178]];
+  assert.deepEqual(decodePolyline(encodePolyline(kl)), kl);
 });
 
 test('geometry helpers', () => {

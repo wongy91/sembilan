@@ -29,7 +29,7 @@ You need Node.js 22.13 or later. There are no dependencies to install.
 git clone https://github.com/wongy91/sembilan.git
 cd sembilan
 npm run dev    # http://localhost:8787
-npm test       # 40 tests
+npm test       # 41 tests
 ```
 
 `npm run dev` serves the app and the API on one port, with community reports stored in an in-memory SQLite database. Use the **Demo** button on a route to drive it without moving.
@@ -60,7 +60,7 @@ npm test       # 40 tests
 ```
 
 1. **Routes.** The app asks TomTom through the Worker when a TomTom key is set, then falls back to Valhalla (FOSSGIS), then to the OSRM demo server. All three are converted to one route format in `public/src/providers.js`.
-2. **Extras on each route.** Toll plazas, speed cameras and R&R come from a bundled OpenStreetMap extract (`public/data/pois.json`). PLUS fares come from `/api/fares`. Lane arrows come from one extra Valhalla request; they are copied onto a route only at junctions where it takes the same road in and out.
+2. **Extras on each route.** Toll plazas, speed cameras and R&R come from a bundled OpenStreetMap extract (`public/data/pois.json`). PLUS fares come from `/api/fares`. When you start driving, Valhalla traces the route you chose (whichever provider planned it) and returns the OpenStreetMap lane markings along it, 190 km at a time.
 3. **Guidance.** `public/src/navigator.js` snaps each GPS fix to the route, decides what to say and when, and detects when you leave the route.
 4. **Without the Worker** the app still routes, guides and alerts. Live traffic, reports and fares switch on only when `/api/health` reports them.
 
@@ -126,7 +126,7 @@ Wrong roads, missing U-turns and missing cameras are OpenStreetMap data. Fix the
 
 - **Traffic and coverage.** Traffic comes from TomTom, not from millions of drivers like Waze, and community reports start with zero users. The OpenStreetMap extract (28 Oct 2026) has only 79 speed cameras for Malaysia.
 - **Browser limits.** Guidance stops when the screen is off, and there is no CarPlay or Android Auto. That needs a native app.
-- **Lanes and speed limits.** Lanes appear only where OpenStreetMap mappers have tagged them. TomTom has no public lane data, so TomTom routes show lanes only at junctions Valhalla drives the same way. Speed limits need a TomTom key.
+- **Lanes and speed limits.** Lanes appear only where OpenStreetMap mappers have tagged them, and arrive a few seconds after you start driving, longer when the free Valhalla server is busy. Speed limits need a TomTom key.
 - **Toll fares** use PLUS's own fare service, the one its website calculator calls. It is undocumented and can change or block outside callers at any time; fares then disappear while navigation keeps working. Only PLUS is priced, Class 1 only, without discounts. Bandar Baru Nilai and Port Dickson Utara/Selatan have no clear OpenStreetMap match and show "fare unavailable".
 - **Free public servers.** Valhalla (FOSSGIS), the OSRM demo server and Photon have fair-use policies and pick up map edits after a delay. Self-host Valhalla before real traffic arrives; a Malaysia–Singapore extract is small.
 - **Voices** depend on the phone. Without a Malay voice it falls back to Indonesian, then the default voice.

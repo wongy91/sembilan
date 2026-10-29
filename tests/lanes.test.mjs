@@ -6,36 +6,45 @@ import { attachLanes, laneCatalog } from '../public/src/lanes.js';
 import { laneIcon } from '../public/src/icons.js';
 
 const fixture = (name) => JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8'));
-const catalog = laneCatalog(fixture('valhalla_osrm_klcc_midvalley.json'));
+const catalog = laneCatalog(fixture('valhalla_trace_klcc_midvalley.json'));
 const summary = (lanes) => lanes.map((l) => `${l.on ? '*' : ''}${l.dirs.join('+')}`).join(' | ');
 const findStep = (route, kind, name) => route.steps.find((s) => s.kind === kind && s.names.includes(name));
+const SULTAN_ISMAIL = '*left | straight+right | right';
 
-test('reads lanes from every intersection of a Valhalla OSRM-format response', () => {
-  assert.ok(catalog.length > 20);
-  const entry = catalog.find((c) => summary(c.lanes) === '*left | straight+right | right');
+test('reads lanes from every intersection of a Valhalla trace', () => {
+  assert.ok(catalog.length > 10);
+  const entry = catalog.find((c) => summary(c.lanes) === SULTAN_ISMAIL);
   assert.ok(entry, 'the Jalan Sultan Ismail left-turn lanes are in the catalog');
   assert.equal(entry.lanes[0].use, 'left');
 });
 
-test('attaches lanes to the matching maneuver of a native Valhalla route', () => {
+test('attaches traced lanes to the maneuvers of the traced route', () => {
   const [route] = fromValhalla(fixture('valhalla_klcc_midvalley.json'));
   attachLanes(route, catalog);
-  const turn = findStep(route, 'turn', 'Jalan Sultan Ismail');
-  assert.equal(summary(turn.lanes), '*left | straight+right | right');
+  assert.equal(summary(findStep(route, 'turn', 'Jalan Sultan Ismail').lanes), SULTAN_ISMAIL);
   assert.equal(route.steps[0].lanes, undefined, 'depart never gets lanes');
-  assert.ok(route.steps.filter((s) => s.lanes).length >= 3);
+  assert.equal(route.steps.filter((s) => s.lanes).length, 4);
 });
 
-test('borrows Valhalla lanes for another provider where it drives the same junction', () => {
+test('works for routes from any provider once they are traced', () => {
   const [route] = fromOsrm(fixture('osrm_klcc_midvalley.json'));
-  attachLanes(route, catalog);
+  attachLanes(route, laneCatalog(fixture('osrm_trace_klcc_midvalley.json')));
+  assert.equal(summary(findStep(route, 'turn', 'Jalan Sultan Ismail').lanes), SULTAN_ISMAIL);
+  assert.equal(route.steps.filter((s) => s.lanes).length, 4);
+});
+
+test('only touches steps inside the traced window', () => {
+  const [route] = fromValhalla(fixture('valhalla_klcc_midvalley.json'));
   const turn = findStep(route, 'turn', 'Jalan Sultan Ismail');
-  assert.equal(summary(turn.lanes), '*left | straight+right | right');
+  attachLanes(route, catalog, 0, turn.along);
+  assert.equal(turn.lanes, undefined);
+  attachLanes(route, catalog, turn.along, Infinity);
+  assert.equal(summary(turn.lanes), SULTAN_ISMAIL);
 });
 
 test('rejects lanes for a different exit road at the same junction', () => {
   const [route] = fromValhalla(fixture('valhalla_klcc_midvalley.json'));
-  const entry = catalog.find((c) => summary(c.lanes) === '*left | straight+right | right');
+  const entry = catalog.find((c) => summary(c.lanes) === SULTAN_ISMAIL);
   const otherRoad = entry.bearings.findIndex((_, i) => i !== entry.in && i !== entry.out);
   attachLanes(route, [{ ...entry, out: otherRoad }]);
   assert.ok(route.steps.every((s) => !s.lanes));
@@ -43,7 +52,7 @@ test('rejects lanes for a different exit road at the same junction', () => {
 
 test('skips lane sets that carry no choice', () => {
   const [route] = fromValhalla(fixture('valhalla_klcc_midvalley.json'));
-  const entry = catalog.find((c) => summary(c.lanes) === '*left | straight+right | right');
+  const entry = catalog.find((c) => summary(c.lanes) === SULTAN_ISMAIL);
   attachLanes(route, [{ ...entry, lanes: entry.lanes.map((l) => ({ ...l, on: true })) }]);
   assert.ok(route.steps.every((s) => !s.lanes));
 });

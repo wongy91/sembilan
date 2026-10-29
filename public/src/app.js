@@ -1,7 +1,7 @@
 import { MapView } from './map.js';
 import { fmtAgo, fmtClock, fmtDistance, fmtDuration, getLang, setLang, t } from './i18n.js';
 import { reversePlace, searchPlaces } from './search.js';
-import { planRoutes } from './routing.js';
+import { loadLanes, planRoutes } from './routing.js';
 import { Navigator } from './navigator.js';
 import { instruction, maneuverIcon, roadName } from './instructions.js';
 import { poisAlongRoute, reportPois, summarize, trafficPois } from './pois.js';
@@ -529,6 +529,7 @@ function startNav(simulated) {
     rerouting: false,
     reportTimer: null,
   };
+  fetchNavLanes(state.nav, 0);
   state.routes = [route];
   state.selected = 0;
   state.mode = 'nav';
@@ -593,6 +594,16 @@ function updateBanner(progress) {
   const then = progress.following;
   $('man-then').hidden = !then;
   if (then) $('man-then').innerHTML = `<span>${esc(t('then'))}</span>${MANEUVER[maneuverIcon(then)] || ''}`;
+}
+
+function fetchNavLanes(nav, from) {
+  const route = nav.route;
+  nav.lanesTo = Infinity;
+  loadLanes(route, from)
+    .then((to) => {
+      if (nav.route === route) nav.lanesTo = to;
+    })
+    .catch(() => {});
 }
 
 function updateLanes(progress) {
@@ -675,6 +686,7 @@ function navTick(fix) {
     nav.lineAlong = progress.along;
   }
   updateBanner(progress);
+  if (progress.along > nav.lanesTo - 20000 && nav.lanesTo < nav.route.distance) fetchNavLanes(nav, progress.along);
   updateLanes(progress);
   if (nav.calloutFor !== progress.nextIndex) {
     nav.calloutFor = progress.nextIndex;
@@ -693,6 +705,7 @@ function useRoute(nav, route) {
   nav.route = route;
   nav.calloutFor = undefined;
   nav.lanesFor = undefined;
+  fetchNavLanes(nav, 0);
   nav.lineAt = 0;
   nav.basePois = [...poisAlongRoute(route, state.poiData), ...trafficPois(route)];
   nav.pois = [...nav.basePois, ...reportPois(route, nav.reports)];

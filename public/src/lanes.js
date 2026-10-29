@@ -4,7 +4,7 @@ const nearest = (bearings, b) => bearings.reduce((best, x, i) => (angleDiff(x, b
 
 export function laneCatalog(json) {
   const out = [];
-  for (const r of json?.routes || []) {
+  for (const r of json?.matchings || []) {
     for (const leg of r.legs || []) {
       for (const s of leg.steps || []) {
         for (const x of s.intersections || []) {
@@ -27,10 +27,10 @@ export function laneCatalog(json) {
   return out;
 }
 
-export function attachLanes(route, catalog) {
+export function attachLanes(route, catalog, from = 0, to = Infinity) {
   const { coords, cum, distance } = route;
   for (const step of route.steps) {
-    if (step.kind === 'depart' || step.kind === 'arrive') continue;
+    if (step.kind === 'depart' || step.kind === 'arrive' || step.along < from || step.along >= to) continue;
     const p = coords[step.index];
     let best = null;
     let bestDist = 15;

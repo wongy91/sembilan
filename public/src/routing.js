@@ -1,7 +1,9 @@
+import { encodePolyline, slice } from './geo.js';
 import { attachLanes, laneCatalog } from './lanes.js';
 import { distinctRoutes, fromOsrm, fromTomTom, fromValhalla } from './providers.js';
 
-const VALHALLA = 'https://valhalla1.openstreetmap.de/route';
+const VALHALLA = 'https://valhalla1.openstreetmap.de';
+const LANE_WINDOW = 190000;
 const OSRM = 'https://router.project-osrm.org/route/v1/driving';
 
 async function getJson(url, init) {
@@ -10,7 +12,7 @@ async function getJson(url, init) {
   return res.json();
 }
 
-function valhalla(from, to, { avoidTolls, avoidHighways, heading, signal }, format) {
+function valhalla(from, to, { avoidTolls, avoidHighways, heading, signal }) {
   const origin = { lon: from[0], lat: from[1] };
   if (Number.isFinite(heading)) Object.assign(origin, { heading: Math.round(heading), heading_tolerance: 60 });
   const body = {
@@ -20,8 +22,7 @@ function valhalla(from, to, { avoidTolls, avoidHighways, heading, signal }, form
     alternates: 2,
     units: 'kilometers',
   };
-  if (format) body.format = format;
-  return getJson(VALHALLA, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal });
+  return getJson(`${VALHALLA}/route`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal });
 }
 
 function osrm(from, to, { signal }) {
@@ -46,19 +47,28 @@ export async function planRoutes(from, to, options = {}) {
   let lastError = null;
   for (const attempt of attempts) {
     try {
-      const routes = distinctRoutes(await attempt()).slice(0, 3);
-      if (!routes.length) continue;
-      valhalla(from, to, options, 'osrm')
-        .then((json) => {
-          const catalog = laneCatalog(json);
-          for (const r of routes) attachLanes(r, catalog);
-        })
-        .catch(() => {});
-      return routes;
+      const routes = distinctRoutes(await attempt());
+      if (routes.length) return routes.slice(0, 3);
     } catch (err) {
       if (options.signal?.aborted) throw err;
       lastError = err;
     }
   }
   throw lastError || new Error('no route');
+}
+
+export async function loadLanes(route, from = 0) {
+  const to = Math.min(route.distance, from + LANE_WINDOW);
+  const json = await getJson(`${VALHALLA}/trace_route`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      encoded_polyline: encodePolyline(slice(route.coords, route.cum, from, to)),
+      costing: 'auto',
+      shape_match: 'map_snap',
+      format: 'osrm',
+    }),
+  });
+  attachLanes(route, laneCatalog(json), from, to);
+  return to;
 }

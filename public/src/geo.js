@@ -48,6 +48,30 @@ export function decodePolyline(str, precision = 6) {
   return out;
 }
 
+export function encodePolyline(points, precision = 6) {
+  const factor = 10 ** precision;
+  const encode = (value) => {
+    let v = value < 0 ? ~(value << 1) : value << 1;
+    let s = '';
+    while (v >= 0x20) {
+      s += String.fromCharCode((0x20 | (v & 0x1f)) + 63);
+      v >>= 5;
+    }
+    return s + String.fromCharCode(v + 63);
+  };
+  let out = '';
+  let lat = 0;
+  let lon = 0;
+  for (const [x, y] of points) {
+    const nextLat = Math.round(y * factor);
+    const nextLon = Math.round(x * factor);
+    out += encode(nextLat - lat) + encode(nextLon - lon);
+    lat = nextLat;
+    lon = nextLon;
+  }
+  return out;
+}
+
 export function cumulative(coords) {
   const cum = new Float64Array(coords.length);
   for (let i = 1; i < coords.length; i++) cum[i] = cum[i - 1] + haversine(coords[i - 1], coords[i]);
