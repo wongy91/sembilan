@@ -1,0 +1,476 @@
+{
+ "source": "https://www.plus.com.my/",
+ "fetched": "2026-10-28",
+ "plazas": [
+  {
+   "code": "AHT",
+   "name": "Ayer Hitam",
+   "state": "JHR"
+  },
+  {
+   "code": "AKH",
+   "name": "Ayer Keroh",
+   "state": "MLK"
+  },
+  {
+   "code": "ALP",
+   "name": "Alor Pongsu",
+   "state": "PRK"
+  },
+  {
+   "code": "ASS",
+   "name": "Alor Setar Selatan",
+   "state": "KDH"
+  },
+  {
+   "code": "ASU",
+   "name": "Alor Setar Utara",
+   "state": "KDH"
+  },
+  {
+   "code": "BBN",
+   "name": "Bandar Baru Nilai",
+   "state": "NSN"
+  },
+  {
+   "code": "BBR",
+   "name": "Bandar Baharu",
+   "state": "KDH"
+  },
+  {
+   "code": "BCS",
+   "name": "Bandar Cassia",
+   "state": "PNG"
+  },
+  {
+   "code": "BDA",
+   "name": "Bandar Ainsdale",
+   "state": "NSN"
+  },
+  {
+   "code": "BDR",
+   "name": "Bidor",
+   "state": "PRK"
+  },
+  {
+   "code": "BGC",
+   "name": "Bandar Gamuda Cove",
+   "state": "SGR"
+  },
+  {
+   "code": "BGR",
+   "name": "Bukit Gambir",
+   "state": "JHR"
+  },
+  {
+   "code": "BGS",
+   "name": "Bangi",
+   "state": "SGR"
+  },
+  {
+   "code": "BKB",
+   "name": "Bukit Beruntung",
+   "state": "SGR"
+  },
+  {
+   "code": "BKM",
+   "name": "Bukit Merah",
+   "state": "PRK"
+  },
+  {
+   "code": "BKR",
+   "name": "Bukit Raja",
+   "state": "SGR"
+  },
+  {
+   "code": "BRG",
+   "name": "Behrang",
+   "state": "PRK"
+  },
+  {
+   "code": "BRT",
+   "name": "Bertam",
+   "state": "PNG"
+  },
+  {
+   "code": "BSI",
+   "name": "Bangunan Sultan Iskandar",
+   "state": "JHR"
+  },
+  {
+   "code": "BSP",
+   "name": "Bandar Saujana Putra",
+   "state": "SGR"
+  },
+  {
+   "code": "BSR",
+   "name": "Bandar Serenia",
+   "state": "SGR"
+  },
+  {
+   "code": "BTR",
+   "name": "Bukit Tagar",
+   "state": "SGR"
+  },
+  {
+   "code": "BTS",
+   "name": "Bukit Tambun Selatan",
+   "state": "PNG"
+  },
+  {
+   "code": "BTU",
+   "name": "Bukit Tambun Utara",
+   "state": "PNG"
+  },
+  {
+   "code": "CKJ",
+   "name": "Changkat Jering",
+   "state": "PRK"
+  },
+  {
+   "code": "DMR",
+   "name": "Damansara",
+   "state": "SGR"
+  },
+  {
+   "code": "EBN",
+   "name": "Ebor Utara",
+   "state": "SGR"
+  },
+  {
+   "code": "EBS",
+   "name": "Ebor Selatan",
+   "state": "SGR"
+  },
+  {
+   "code": "GPG",
+   "name": "Gopeng",
+   "state": "PRK"
+  },
+  {
+   "code": "GRN",
+   "name": "Gurun",
+   "state": "KDH"
+  },
+  {
+   "code": "HKG",
+   "name": "Hutan Kampong",
+   "state": "KDH"
+  },
+  {
+   "code": "HSB",
+   "name": "Hospital Sungai Buloh",
+   "state": "SGR"
+  },
+  {
+   "code": "IPS",
+   "name": "Ipoh Selatan",
+   "state": "PRK"
+  },
+  {
+   "code": "IPU",
+   "name": "Ipoh Utara",
+   "state": "PRK"
+  },
+  {
+   "code": "JLD",
+   "name": "Jalan Duta",
+   "state": "KUL"
+  },
+  {
+   "code": "JPP",
+   "name": "Penang Bridge",
+   "state": "PNG"
+  },
+  {
+   "code": "JRU",
+   "name": "Juru",
+   "state": "PNG"
+  },
+  {
+   "code": "JSN",
+   "name": "Jasin",
+   "state": "MLK"
+  },
+  {
+   "code": "JTR",
+   "name": "Jitra",
+   "state": "KDH"
+  },
+  {
+   "code": "JWI",
+   "name": "Jawi",
+   "state": "PNG"
+  },
+  {
+   "code": "KDR",
+   "name": "Kota Damansara",
+   "state": "SGR"
+  },
+  {
+   "code": "KJG",
+   "name": "Kajang",
+   "state": "SGR"
+  },
+  {
+   "code": "KKS",
+   "name": "Kuala Kangsar",
+   "state": "PRK"
+  },
+  {
+   "code": "KLA",
+   "name": "KLIA",
+   "state": "SGR"
+  },
+  {
+   "code": "KLI",
+   "name": "Kulai",
+   "state": "JHR"
+  },
+  {
+   "code": "KPS",
+   "name": "Kempas",
+   "state": "JHR"
+  },
+  {
+   "code": "KSG",
+   "name": "Kubang Semang",
+   "state": "PNG"
+  },
+  {
+   "code": "LBB",
+   "name": "Lembah Beringin",
+   "state": "SGR"
+  },
+  {
+   "code": "LKT",
+   "name": "Lukut",
+   "state": "NSN"
+  },
+  {
+   "code": "LUN",
+   "name": "Lunas",
+   "state": "PNG"
+  },
+  {
+   "code": "MAC",
+   "name": "Machap",
+   "state": "JHR"
+  },
+  {
+   "code": "MBU",
+   "name": "Mambau",
+   "state": "NSN"
+  },
+  {
+   "code": "PDG",
+   "name": "Pendang",
+   "state": "KDH"
+  },
+  {
+   "code": "PDS",
+   "name": "Port Dickson Selatan",
+   "state": "NSN"
+  },
+  {
+   "code": "PDU",
+   "name": "Port Dickson Utara",
+   "state": "NSN"
+  },
+  {
+   "code": "PGH",
+   "name": "Pagoh",
+   "state": "JHR"
+  },
+  {
+   "code": "PHT",
+   "name": "Putra Height",
+   "state": "SGR"
+  },
+  {
+   "code": "PLI",
+   "name": "Pedas Linggi",
+   "state": "NSN"
+  },
+  {
+   "code": "PPM",
+   "name": "Putra Mahkota",
+   "state": "SGR"
+  },
+  {
+   "code": "PSR",
+   "name": "Slim River",
+   "state": "PRK"
+  },
+  {
+   "code": "PSV",
+   "name": "Southville",
+   "state": "SGR"
+  },
+  {
+   "code": "PTJ",
+   "name": "Putrajaya",
+   "state": "PJ"
+  },
+  {
+   "code": "RAW",
+   "name": "Rawang",
+   "state": "SGR"
+  },
+  {
+   "code": "RWS",
+   "name": "Rawang Selatan",
+   "state": "SGR"
+  },
+  {
+   "code": "SAT",
+   "name": "Simpang Ampat",
+   "state": "MLK"
+  },
+  {
+   "code": "SBG",
+   "name": "Subang",
+   "state": "SGR"
+  },
+  {
+   "code": "SBI",
+   "name": "Sungai Besi",
+   "state": "SGR"
+  },
+  {
+   "code": "SBN",
+   "name": "Seremban",
+   "state": "NSN"
+  },
+  {
+   "code": "SBY",
+   "name": "Sungai Buaya",
+   "state": "SGR"
+  },
+  {
+   "code": "SDK",
+   "name": "Sedenak",
+   "state": "JHR"
+  },
+  {
+   "code": "SEA",
+   "name": "Seafield",
+   "state": "SGR"
+  },
+  {
+   "code": "SGB",
+   "name": "Sungai Buloh",
+   "state": "SGR"
+  },
+  {
+   "code": "SGD",
+   "name": "Sungai Dua",
+   "state": "PNG"
+  },
+  {
+   "code": "SHA",
+   "name": "Shah Alam",
+   "state": "SGR"
+  },
+  {
+   "code": "SKD",
+   "name": "Skudai",
+   "state": "JHR"
+  },
+  {
+   "code": "SKI",
+   "name": "Sungkai",
+   "state": "PRK"
+  },
+  {
+   "code": "SNU",
+   "name": "Senai Utara",
+   "state": "JHR"
+  },
+  {
+   "code": "SPP",
+   "name": "Simpang Pulai",
+   "state": "PRK"
+  },
+  {
+   "code": "SPR",
+   "name": "Simpang Renggam",
+   "state": "JHR"
+  },
+  {
+   "code": "SPS",
+   "name": "Sungai Petani Selatan",
+   "state": "KDH"
+  },
+  {
+   "code": "SPU",
+   "name": "Sungai Petani Utara",
+   "state": "KDH"
+  },
+  {
+   "code": "STA",
+   "name": "Setia Alam",
+   "state": "SGR"
+  },
+  {
+   "code": "SWG",
+   "name": "Senawang",
+   "state": "NSN"
+  },
+  {
+   "code": "TGK",
+   "name": "Tangkak",
+   "state": "JHR"
+  },
+  {
+   "code": "TGM",
+   "name": "Tanjung Malim",
+   "state": "PRK"
+  },
+  {
+   "code": "TLK",
+   "name": "Lima Kedai",
+   "state": "JHR"
+  },
+  {
+   "code": "TPH",
+   "name": "Tapah",
+   "state": "PRK"
+  },
+  {
+   "code": "TPU",
+   "name": "Taiping Utara",
+   "state": "PRK"
+  },
+  {
+   "code": "TTK",
+   "name": "Tanjung Kupang",
+   "state": "JHR"
+  },
+  {
+   "code": "TTP",
+   "name": "Perling",
+   "state": "JHR"
+  },
+  {
+   "code": "UPM",
+   "name": "UPM",
+   "state": "SGR"
+  },
+  {
+   "code": "USJ",
+   "name": "USJ",
+   "state": "SGR"
+  },
+  {
+   "code": "YPS",
+   "name": "Yong Peng Selatan",
+   "state": "JHR"
+  },
+  {
+   "code": "YPU",
+   "name": "Yong Peng Utara",
+   "state": "JHR"
+  }
+ ]
+}
