@@ -4,6 +4,12 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-29
+
+### Changed
+
+- Installing the app is now a clear call to action: a branded card with a big **Install app** button. It installs in one tap where the browser allows it, and otherwise shows step-by-step instructions for iPhone Safari, other iPhone browsers, Android, Mac Safari and in-app browsers (with a Copy link button, since those can't install). **Not now** hides it for 7 days instead of forever.
+
 ## [0.7.0] - 2026-10-29
 
 ### Added
@@ -101,7 +107,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.7.0...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.8.0...HEAD
+[0.8.0]: https://github.com/wongy91/sembilan/compare/0.7.0...0.8.0
 [0.7.0]: https://github.com/wongy91/sembilan/compare/0.6.0...0.7.0
 [0.6.0]: https://github.com/wongy91/sembilan/compare/0.5.0...0.6.0
 [0.5.0]: https://github.com/wongy91/sembilan/compare/0.4.2...0.5.0
