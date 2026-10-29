@@ -144,6 +144,7 @@ let renderedMode = null;
 
 function render() {
   document.body.dataset.mode = state.mode;
+  document.body.classList.toggle('sheet-collapsed', settings.sheetCollapsed);
   const body = $('sheet-body');
   body.innerHTML = { home: homeSheet, place: placeSheet, routes: routesSheet, nav: navSheet, arrived: arrivedSheet }[state.mode]();
   $('finder').hidden = !(state.mode === 'home' || state.navSearch);
@@ -288,6 +289,13 @@ function toggleVoice() {
   $('btn-sound').innerHTML = settings.voice ? UI.sound : UI.muted;
   const tile = document.querySelector('[data-action="mute"]');
   if (tile) tile.innerHTML = soundTile();
+}
+
+function collapseHome(collapsed) {
+  if (settings.sheetCollapsed === collapsed) return;
+  changeSetting('sheetCollapsed', collapsed);
+  document.body.classList.toggle('sheet-collapsed', collapsed);
+  measureSheet();
 }
 
 function toggleMore() {
@@ -1024,12 +1032,18 @@ function bindUi() {
   });
   let swipeFrom = null;
   $('sheet').addEventListener('pointerdown', (e) => {
-    swipeFrom = state.mode === 'nav' ? e.clientY : null;
+    const homePanel = state.mode === 'home' && !document.body.classList.contains('searching');
+    swipeFrom = state.mode === 'nav' || homePanel ? e.clientY : null;
   });
   window.addEventListener('pointerup', (e) => {
     if (swipeFrom == null) return;
     const dy = e.clientY - swipeFrom;
     swipeFrom = null;
+    if (state.mode === 'home') {
+      if (Math.abs(dy) < 30 || (dy > 0 && $('sheet').scrollTop > 0)) return;
+      state.swipedAt = Date.now();
+      return collapseHome(dy > 0);
+    }
     const more = $('nav-more');
     if (more && ((dy < -30 && more.hidden) || (dy > 30 && !more.hidden))) {
       state.swipedAt = Date.now();
@@ -1047,7 +1061,12 @@ function bindUi() {
     if (action === 'avoid-tolls') changeSetting('avoidTolls', e.target.checked);
     if (action === 'avoid-highways') changeSetting('avoidHighways', e.target.checked);
   });
+  document.querySelector('.grab').addEventListener('click', () => {
+    if (Date.now() - (state.swipedAt || 0) < 400 || state.mode !== 'home') return;
+    collapseHome(!settings.sheetCollapsed);
+  });
   $('sheet').addEventListener('click', (e) => {
+    if (state.mode === 'home' && Date.now() - (state.swipedAt || 0) < 400) return;
     const target = e.target.closest('[data-action]');
     if (!target || target.tagName === 'INPUT') return;
     const i = Number(target.dataset.i);

@@ -403,11 +403,29 @@ body.searching .grab {
 }
 
 .grab {
+  position: relative;
+  display: block;
   width: 44px;
   height: 5px;
   margin: 2px auto 12px;
+  padding: 0;
+  border: 0;
   border-radius: 3px;
   background: var(--line);
+}
+
+.grab::before {
+  content: '';
+  position: absolute;
+  inset: -14px -48px;
+}
+
+body[data-mode='home']:not(.searching) .sheet {
+  touch-action: none;
+}
+
+body.sheet-collapsed[data-mode='home']:not(.searching) #sheet-body {
+  display: none;
 }
 
 body[data-mode='nav'] .grab {

@@ -12,6 +12,7 @@ const DEFAULTS = {
   home: null,
   work: null,
   recents: [],
+  sheetCollapsed: false,
 };
 
 export function load() {
