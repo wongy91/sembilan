@@ -4,6 +4,18 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+### Added
+
+- **中文 (Simplified Chinese)**: the whole app, the turn-by-turn guidance ("500米后，左转，进入 Jalan Tun Razak") and the spoken alerts ("前方800米有测速相机，限速90"), with a Mandarin voice where the phone has one. Pick it in Settings → Language; a first visit starts in Chinese, Malay or English to match the phone.
+
+### Changed
+
+- The voice list in Settings shows only voices for the chosen language, and a voice picked for another language is no longer used to read this one.
+
+### Fixed
+
+- The settings dialog could be wider than the screen, with the close button off the edge, on phones with many voices.
+
 ## [0.13.0] - 2026-10-29
 
 ### Changed

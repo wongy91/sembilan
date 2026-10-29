@@ -16,13 +16,21 @@ const DEFAULTS = {
   sheetCollapsed: false,
 };
 
+export function deviceLang(languages = globalThis.navigator?.languages || []) {
+  for (const tag of languages) {
+    const code = String(tag).slice(0, 2).toLowerCase();
+    if (code === 'en' || code === 'ms' || code === 'zh') return code;
+  }
+  return DEFAULTS.lang;
+}
+
 export function load() {
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) || '{}');
     if (!saved.nightChosen) delete saved.night;
-    return { ...DEFAULTS, ...saved };
+    return { ...DEFAULTS, lang: deviceLang(), ...saved };
   } catch {
-    return { ...DEFAULTS };
+    return { ...DEFAULTS, lang: deviceLang() };
   }
 }
 

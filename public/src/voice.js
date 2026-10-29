@@ -21,18 +21,28 @@ export function configure(options) {
   if ('voiceURI' in options) preferred = options.voiceURI;
 }
 
+const ORDER = {
+  ms: ['ms-my', 'ms', 'id-id', 'id'],
+  zh: ['zh-cn', 'zh-hans', 'cmn', 'zh-sg', 'zh-my', 'zh-tw', 'zh-hant', 'zh'],
+  en: ['en-gb', 'en-my', 'en-sg', 'en-us', 'en'],
+};
+const FALLBACK = { ms: 'ms-MY', zh: 'zh-CN', en: 'en-GB' };
+
+const tagOf = (v) => v.lang.replace('_', '-').toLowerCase();
+const speaks = (v) => (ORDER[lang] || ORDER.en).some((prefix) => tagOf(v).startsWith(prefix));
+
 export function available() {
-  return voices.filter((v) => /^(ms|id|en)/i.test(v.lang));
+  return voices.filter(speaks);
 }
 
 export function pick() {
   if (preferred) {
-    const v = voices.find((x) => x.voiceURI === preferred);
+    const v = voices.find((x) => x.voiceURI === preferred && speaks(x));
     if (v) return v;
   }
-  const order = lang === 'ms' ? ['ms-my', 'ms', 'id-id', 'id'] : ['en-gb', 'en-my', 'en-sg', 'en-us', 'en'];
+  const order = ORDER[lang] || ORDER.en;
   for (const prefix of order) {
-    const v = voices.find((x) => x.lang.replace('_', '-').toLowerCase().startsWith(prefix));
+    const v = voices.find((x) => tagOf(x).startsWith(prefix));
     if (v) return v;
   }
   return null;
@@ -55,7 +65,7 @@ export function say(items, { force = false } = {}) {
   for (const item of items) {
     if (!item.text) continue;
     const u = new SpeechSynthesisUtterance(item.text);
-    u.lang = voice?.lang || (lang === 'ms' ? 'ms-MY' : 'en-GB');
+    u.lang = voice?.lang || FALLBACK[lang] || FALLBACK.en;
     if (voice) u.voice = voice;
     u.rate = 1;
     synth.speak(u);

@@ -9,7 +9,7 @@ Free, open-source turn-by-turn navigation for Malaysia that runs in the browser.
 
 | Area | What you get |
 | -- | -- |
-| Voice guidance | English or Bahasa Melayu, generated in the app: "Dalam 2 kilometer, ambil susur keluar 137 ke arah Simpang Pulai, Batu Gajah" |
+| Voice guidance | English, Bahasa Melayu or 中文 (Simplified Chinese), generated in the app: "Dalam 2 kilometer, ambil susur keluar 137 ke arah Simpang Pulai, Batu Gajah" or "2公里后，从 137 号出口驶出，前往 Simpang Pulai". A first visit starts in the phone's language when it is one of these |
 | Routing | Up to 3 alternatives, avoid tolls or highways, automatic reroute when you leave the route. Mid-drive **Routes** shows your current route next to fresh alternatives, with time saved, tolls and a traffic strip, and switches in one tap. With live traffic, the app checks every 5 minutes for a faster way and offers it ("10 min faster · via Jalan Syed Putra", spoken too): **Switch**, **Keep**, or let it close after 20 seconds |
 | Live traffic | Traffic-aware routes and a traffic layer from TomTom. The key stays on the server |
 | Lane guidance | Lane arrows under the turn instruction, with the lanes to use lit up, wherever OpenStreetMap has lane markings |
@@ -86,7 +86,7 @@ npm test       # 64 tests
 | `public/src/navigator.js` | Guidance engine: snapping, announcements, off-route detection |
 | `public/src/providers.js`, `routing.js` | Route requests and conversion from Valhalla, OSRM and TomTom |
 | `public/src/pois.js`, `fares.js`, `lanes.js` | Tolls, cameras and R&R along a route; PLUS fares; lane guidance |
-| `public/src/instructions.js`, `i18n.js`, `voice.js` | Spoken and written instructions in English and Malay |
+| `public/src/instructions.js`, `i18n.js`, `voice.js` | Spoken and written instructions in English, Malay and Chinese |
 | `public/data/` | Bundled toll plaza, camera and R&R data, and PLUS plaza codes |
 | `worker/index.js` | Cloudflare Worker: API routes plus the static files |
 | `migrations/` | D1 schema for community reports |
@@ -161,7 +161,7 @@ Wrong roads, missing U-turns and missing cameras are OpenStreetMap data. Fix the
 - **Business search quality** follows Overture's data: some places have outdated names or positions, and a search matches word beginnings, so typos are not forgiven.
 - **Search without a TomTom key** uses Photon only. It misses many house addresses, and its nearby results only include places whose names match the category (for example Petron for petrol).
 - **Free public servers.** Valhalla (FOSSGIS), the OSRM demo server and Photon have fair-use policies and pick up map edits after a delay. Self-host Valhalla before real traffic arrives; a Malaysia–Singapore extract is small.
-- **Voices** depend on the phone. Without a Malay voice it falls back to Indonesian, then the default voice.
+- **Voices** depend on the phone. Without a Malay voice it falls back to Indonesian, then the default voice. Chinese prefers a Mandarin (zh-CN) voice, then Singapore, Malaysia or Taiwan. Road and place names stay in their Malay form in Chinese guidance, as drivers see them on signs, so a Chinese voice may pronounce them unnaturally. The Chinese text has not yet had a native-speaker review.
 - A toll plaza mapped as a single booth beside the lanes can be missed, for example the Second Penang Bridge plaza.
 
 ## Contributing
