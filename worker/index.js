@@ -1,3 +1,5 @@
+import { searchIndex } from './places.js';
+
 const REGION = [99.0, 0.5, 120.0, 8.0];
 const REPORT_TTL_MIN = { accident: 90, police: 60, hazard: 120, jam: 30, closure: 240, flood: 360, pothole: 1440 };
 const MAX_REPORTS_PER_HOUR = 10;
@@ -8,6 +10,8 @@ const fareCache = new Map();
 const SEARCH_TTL_MS = 6 * 3600000;
 const searchCache = new Map();
 const NEARBY_CATEGORIES = { fuel: '7311', food: '7315', parking: '7369,7313', ev: '7309' };
+const placesChunks = new Map();
+let placesManifest = null;
 
 class HttpError extends Error {
   constructor(status, message) {
@@ -138,6 +142,38 @@ async function search(env, url, now) {
   return json({ results });
 }
 
+async function placesAsset(env, url, path) {
+  const res = env.ASSETS ? await env.ASSETS.fetch(new Request(new URL(path, url))) : null;
+  if (!res?.ok) throw new HttpError(501, 'the places index is not built');
+  return res.json();
+}
+
+async function hasPlaces(env, url) {
+  try {
+    placesManifest ??= await placesAsset(env, url, '/data/places/index.json');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function places(env, url) {
+  const q = (url.searchParams.get('q') || '').trim();
+  const lat = Number(url.searchParams.get('lat'));
+  const lon = Number(url.searchParams.get('lon'));
+  if (!inRegion(lon, lat)) throw new HttpError(400, 'lat and lon must be inside Malaysia');
+  if (q.length < 2 || q.length > 120) throw new HttpError(400, 'q must be 2 to 120 characters');
+  placesManifest ??= await placesAsset(env, url, '/data/places/index.json');
+  const load = async (i) => {
+    if (!placesChunks.has(i)) {
+      placesChunks.set(i, await placesAsset(env, url, `/data/places/${i}.json`));
+      if (placesChunks.size > 64) placesChunks.delete(placesChunks.keys().next().value);
+    }
+    return placesChunks.get(i);
+  };
+  return json({ results: await searchIndex(placesManifest, load, q, [lon, lat]) });
+}
+
 async function plusFare(from, to, now) {
   const key = `${from}/${to}`;
   const hit = fareCache.get(key);
@@ -263,9 +299,10 @@ async function api(request, env, ctx, url) {
   const { pathname } = url;
   const method = request.method;
   if (pathname === '/api/health' && method === 'GET') {
-    return json({ ok: true, traffic: !!env.TOMTOM_API_KEY, reports: !!env.DB, fares: true, search: !!env.TOMTOM_API_KEY });
+    return json({ ok: true, traffic: !!env.TOMTOM_API_KEY, reports: !!env.DB, fares: true, search: !!env.TOMTOM_API_KEY, places: await hasPlaces(env, url) });
   }
   if (pathname === '/api/search' && method === 'GET') return search(env, url, now);
+  if (pathname === '/api/places' && method === 'GET') return places(env, url);
   if (pathname === '/api/route' && method === 'POST') return route(request, env);
   if (pathname === '/api/fares' && method === 'POST') return fares(request, now);
   const tile = /^\/api\/traffic\/(\d+)\/(\d+)\/(\d+)\.png$/.exec(pathname);

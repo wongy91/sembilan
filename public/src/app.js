@@ -31,7 +31,7 @@ const state = {
   searchAbort: null,
   fix: null,
   realFix: null,
-  backend: { traffic: false, reports: false, fares: false, search: false },
+  backend: { traffic: false, reports: false, fares: false, search: false, places: false },
   poiData: null,
   nav: null,
   following: true,
@@ -572,7 +572,7 @@ async function runSearch(query) {
   showResults([...local, { msg: t('searching') }]);
   try {
     const near = state.fix ? [state.fix.lon, state.fix.lat] : map.center();
-    const list = await searchPlaces(query, { near, lang: getLang(), signal: ctrl.signal, tomtom: state.backend.search });
+    const list = await searchPlaces(query, { near, lang: getLang(), signal: ctrl.signal, tomtom: state.backend.search, places: state.backend.places });
     if (ctrl.signal.aborted) return;
     searchCache.set(cacheKey(query), list);
     if (searchCache.size > 100) searchCache.delete(searchCache.keys().next().value);

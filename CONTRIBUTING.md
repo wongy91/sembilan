@@ -4,7 +4,7 @@ Thanks for helping. Bug reports, data fixes and pull requests are all welcome.
 
 ## Set up
 
-You need Node.js 22.13 or later. There is nothing to install.
+You need Node.js 22.13 or later. There is nothing to install. To work on business search, also install [DuckDB](https://duckdb.org) and run `npm run data:places` once (see the README's Data section).
 
 ```bash
 npm run dev    # http://localhost:8787

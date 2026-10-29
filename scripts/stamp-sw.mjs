@@ -21,7 +21,9 @@ async function listFiles(dir) {
 
 async function build() {
   const { version } = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
-  const files = (await listFiles(root)).filter((p) => !GENERATED.has(p) && CACHEABLE.test(p) && !INSTALL_ONLY.has(p)).sort();
+  const files = (await listFiles(root))
+    .filter((p) => !GENERATED.has(p) && CACHEABLE.test(p) && !INSTALL_ONLY.has(p) && !p.startsWith('data/places/'))
+    .sort();
   const hash = createHash('sha256').update(version);
   for (const p of files) hash.update(p).update(await readFile(join(root, p)));
   return { version, id: hash.digest('hex').slice(0, 12), files: [...files, 'src/version.js'].sort() };

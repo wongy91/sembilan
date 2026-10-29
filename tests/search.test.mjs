@@ -79,3 +79,21 @@ test('nearby: TomTom results sorted by distance, Photon with a category filter w
   assert.equal(url.searchParams.get('osm_tag'), 'amenity:parking');
   assert.deepEqual(osm.result.map((p) => p.name), ['Parking', 'Galeria Pantai'], 'unnamed places get the category label; places over 30 km are dropped');
 });
+
+test('places that match every word come first: OpenStreetMap, then Overture, then partial matches', async () => {
+  const { result } = await withFetch(
+    (url) =>
+      url.startsWith('/api/places')
+        ? json({ results: [{ name: 'Signature Ayu Borneo @ Bloomsvale', sub: 'Petaling', category: 'wellness_service', lon: 101.6606, lat: 3.0759 }, { name: 'Mid Valley Carpark', sub: '', category: 'parking', lon: 101.677, lat: 3.118 }] })
+        : json(photon(['Ayu Borneo', 'Ayu Borneo Sepang'])),
+    () => searchPlaces('signature ayu borneo', { near: NEAR, places: true }),
+  );
+  assert.equal(result[0].name, 'Signature Ayu Borneo @ Bloomsvale', 'the only full match leads');
+  assert.equal(result[0].sub, 'Petaling · Wellness service');
+  assert.deepEqual(result.slice(1, 3).map((p) => p.name), ['Ayu Borneo', 'Ayu Borneo Sepang']);
+  const landmark = await withFetch(
+    (url) => (url.startsWith('/api/places') ? json({ results: [{ name: 'Mid Valley Carpark', sub: '', category: 'parking', lon: 101.677, lat: 3.118 }] }) : json(photon(['Mid Valley Megamall']))),
+    () => searchPlaces('mid valley', { near: NEAR, places: true }),
+  );
+  assert.deepEqual(landmark.result.map((p) => p.name), ['Mid Valley Megamall', 'Mid Valley Carpark'], 'OpenStreetMap landmarks stay above Overture businesses');
+});

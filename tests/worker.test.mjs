@@ -23,9 +23,9 @@ async function withFetch(fake, fn) {
 }
 
 test('health reports which optional features are configured', async () => {
-  assert.deepEqual(await (await call({}, '/api/health')).json(), { ok: true, traffic: false, reports: false, fares: true, search: false });
+  assert.deepEqual(await (await call({}, '/api/health')).json(), { ok: true, traffic: false, reports: false, fares: true, search: false, places: false });
   const env = { TOMTOM_API_KEY: 'k', DB: createLocalD1() };
-  assert.deepEqual(await (await call(env, '/api/health')).json(), { ok: true, traffic: true, reports: true, fares: true, search: true });
+  assert.deepEqual(await (await call(env, '/api/health')).json(), { ok: true, traffic: true, reports: true, fares: true, search: true, places: false });
 });
 
 test('route proxy is disabled without a TomTom key', async () => {

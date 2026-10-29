@@ -1,4 +1,5 @@
 import { haversine } from './geo.js';
+import { tokenize } from './text.js';
 
 const PHOTON = 'https://photon.komoot.io';
 const ADDRESS_LIKE = /\d|\b(jalan|jln|lorong|lrg|taman|tmn|persiaran|lebuh|lot|no|blok|block|kampung|kg|bandar|seksyen|section)\b/i;
@@ -35,6 +36,14 @@ export function mergePlaces(first, second, limit = 8) {
   return out.slice(0, limit);
 }
 
+const prettyCategory = (c) => (c ? c.replace(/_/g, ' ').replace(/^\w/, (x) => x.toUpperCase()) : '');
+
+async function overtureSearch(query, near, signal) {
+  const res = await fetch(`/api/places?${nearParams(near, { q: query })}`, { signal });
+  if (!res.ok) throw new Error(`places ${res.status}`);
+  return ((await res.json()).results || []).map(({ category, ...p }) => ({ ...p, sub: [p.sub, prettyCategory(category)].filter(Boolean).join(' · ') }));
+}
+
 async function tomtomSearch(params, signal) {
   const res = await fetch(`/api/search?${params}`, { signal });
   if (!res.ok) throw new Error(`search ${res.status}`);
@@ -43,7 +52,7 @@ async function tomtomSearch(params, signal) {
 
 const nearParams = (near, extra) => new URLSearchParams({ ...extra, lat: near[1].toFixed(5), lon: near[0].toFixed(5) });
 
-export async function searchPlaces(query, { near, lang, signal, tomtom = false } = {}) {
+export async function searchPlaces(query, { near, lang, signal, tomtom = false, places = false } = {}) {
   const coord = COORD.exec(query);
   if (coord) {
     const lat = Number(coord[1]);
@@ -51,7 +60,9 @@ export async function searchPlaces(query, { near, lang, signal, tomtom = false }
     return [{ name: `${lat.toFixed(5)}, ${lon.toFixed(5)}`, sub: '', lon, lat }];
   }
   const remote = () => tomtomSearch(nearParams(near, { q: query }), signal).catch(() => []);
-  const early = tomtom && isAddressLike(query) ? remote() : null;
+  const addressy = isAddressLike(query);
+  const early = tomtom && addressy ? remote() : null;
+  const overture = places ? overtureSearch(query, near, signal).catch(() => []) : Promise.resolve([]);
   let osm = [];
   let failure = null;
   try {
@@ -60,9 +71,15 @@ export async function searchPlaces(query, { near, lang, signal, tomtom = false }
     if (!tomtom || signal?.aborted) throw err;
     failure = err;
   }
-  let list = osm;
-  if (early) list = mergePlaces(await early, osm);
-  else if (tomtom && osm.length < 3) list = mergePlaces(osm, await remote());
+  const pois = await overture;
+  const words = tokenize(query);
+  const full = (p) => {
+    const tokens = tokenize(`${p.name} ${p.sub}`);
+    return words.every((q) => tokens.some((t) => t.startsWith(q)));
+  };
+  let list = mergePlaces([...osm.filter(full), ...pois.filter(full), ...osm.filter((p) => !full(p)), ...pois.filter((p) => !full(p))], []);
+  if (early) list = mergePlaces(await early, list);
+  else if (tomtom && list.length < 3) list = mergePlaces(list, await remote());
   if (!list.length && failure) throw failure;
   return withDistance(list, near);
 }

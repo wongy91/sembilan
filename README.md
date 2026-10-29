@@ -25,14 +25,20 @@ Free, open-source turn-by-turn navigation for Malaysia that runs in the browser.
 
 ## Quick start
 
-You need Node.js 22.13 or later. There are no dependencies to install.
+You need Node.js 22.13 or later. There are no npm dependencies to install.
 
 ```bash
 git clone https://github.com/wongy91/sembilan.git
 cd sembilan
 npm run dev    # http://localhost:8787
-npm test       # 54 tests
+npm test       # 64 tests
 ```
+
+- **Business and shop search (optional).** Build the places index once with [DuckDB](https://duckdb.org) (`brew install duckdb`). It takes about 30 seconds. Without it, search uses Photon and TomTom only.
+
+  ```bash
+  npm run data:places   # writes public/data/places/ (~170 MB, ~1,700 files, not in git)
+  ```
 
 `npm run dev` serves the app and the API on one port, with community reports stored in an in-memory SQLite database. Use the **Demo** button on a route to drive it without moving.
 
@@ -56,15 +62,16 @@ npm test       # 54 tests
  └───┬──────────────┬─────────────┬──────┘             │ /api/reports  community reports (D1) │
      │              │             │                    │ /api/fares    PLUS toll fares        │
      ▼              ▼             ▼                    │ /api/search   TomTom search, nearby  │
- Valhalla /      Photon       OpenFreeMap              └──────────────────────────────────────┘
- OSRM            (search)     (map tiles)
+ Valhalla /      Photon       OpenFreeMap              │ /api/places   Overture places index  │
+ OSRM            (search)     (map tiles)              └──────────────────────────────────────┘
  (routes, lanes)
 ```
 
 1. **Routes.** The app asks TomTom through the Worker when a TomTom key is set, then falls back to Valhalla (FOSSGIS), then to the OSRM demo server. All three are converted to one route format in `public/src/providers.js`.
-2. **Extras on each route.** Toll plazas, speed cameras and R&R come from a bundled OpenStreetMap extract (`public/data/pois.json`). PLUS fares come from `/api/fares`. When you start driving, Valhalla traces the route you chose (whichever provider planned it) and returns the OpenStreetMap lane markings along it, 190 km at a time.
-3. **Guidance.** `public/src/navigator.js` snaps each GPS fix to the route, decides what to say and when, and detects when you leave the route.
-4. **Without the Worker** the app still routes, guides and alerts. Live traffic, reports and fares switch on only when `/api/health` reports them.
+2. **Search.** Photon (OpenStreetMap) finds landmarks and streets; TomTom, through the Worker, finds house addresses; and `/api/places` searches about 880,000 shops, restaurants and other businesses in Malaysia and Singapore from [Overture Maps](https://overturemaps.org). Results that match every word you typed come first, then by distance.
+3. **Extras on each route.** Toll plazas, speed cameras and R&R come from a bundled OpenStreetMap extract (`public/data/pois.json`). PLUS fares come from `/api/fares`. When you start driving, Valhalla traces the route you chose (whichever provider planned it) and returns the OpenStreetMap lane markings along it, 190 km at a time.
+4. **Guidance.** `public/src/navigator.js` snaps each GPS fix to the route, decides what to say and when, and detects when you leave the route.
+5. **Without the Worker** the app still routes, guides and alerts. Live traffic, reports and fares switch on only when `/api/health` reports them.
 
 ### Project layout
 
@@ -80,7 +87,8 @@ npm test       # 54 tests
 | `public/data/` | Bundled toll plaza, camera and R&R data, and PLUS plaza codes |
 | `worker/index.js` | Cloudflare Worker: API routes plus the static files |
 | `migrations/` | D1 schema for community reports |
-| `scripts/` | Dev server, data builders, service-worker template and stamper |
+| `worker/places.js` | Builds and searches the Overture places index |
+| `scripts/` | Dev server, data builders (including `build-places.mjs`), service-worker template and stamper |
 | `tests/` | Unit tests (`node:test`) and saved API responses |
 
 ## Deploy your own
@@ -99,7 +107,9 @@ npx wrangler deploy
 
 For live traffic, create a free key at [developer.tomtom.com](https://developer.tomtom.com/) and run `npx wrangler secret put TOMTOM_API_KEY`; it prompts for the key.
 
-To host on any static host instead, run `node scripts/stamp-sw.mjs` and upload `public/`. Live traffic, reports and fares need the Worker.
+Run `npm run data:places` before your first deploy if you want business search; the first upload of the index is about 170 MB, and later deploys only upload files that changed.
+
+To host on any static host instead, run `node scripts/stamp-sw.mjs` and upload `public/`. Live traffic, reports, fares and business search need the Worker.
 
 ## Configuration
 
@@ -120,6 +130,16 @@ Everything secret is a Worker secret, set with `npx wrangler secret put <NAME>`.
 - `public/data/plus-plazas.json`: the 94 PLUS plaza codes and names, read from the fare calculator on www.plus.com.my.
 - `public/data/pois.json`: toll plazas, speed cameras and R&R from OpenStreetMap, with PLUS codes matched by name (91 of 94).
 
+### Places index (DuckDB)
+
+`npm run data:places` builds the business search index from the latest monthly [Overture Maps](https://overturemaps.org) release. It needs the [DuckDB](https://duckdb.org) command-line tool (`brew install duckdb`, or a download from duckdb.org) and an internet connection; nothing to sign up for.
+
+1. DuckDB reads Overture's public Parquet files straight from Amazon S3 and downloads only the Malaysia and Singapore rows it needs: named places with confidence 0.5 or higher that aren't marked closed (about 880,000).
+2. `worker/places.js` turns them into an index sorted by word: about 1,700 files of 1,500 rows (around 100 KB each) plus a small `index.json` with the list of very common words that are not indexed.
+3. The Worker answers `/api/places` by loading only the 1 to 3 files that hold the rarest word of a query, so a search costs about 1 to 3 ms of CPU, inside the free plan's 10 ms limit.
+
+The output goes to `public/data/places/`, which is git-ignored and excluded from the app's offline copy. Re-run it monthly to pick up new Overture releases, then deploy. Set `OVERTURE_RELEASE=2026-10-21.0` to pin a release.
+
 Fares are looked up live through `POST /api/fares`, which calls PLUS's fare service and caches each plaza pair for 12 hours. Each run of PLUS plazas is priced from its first plaza to its last. A run is split when the route passes another operator's plaza or leaves the expressways. Per-plaza amounts are shown only when they add up to the whole-trip fare.
 
 Wrong roads, missing U-turns and missing cameras are OpenStreetMap data. Fix them at [openstreetmap.org](https://www.openstreetmap.org) and every app benefits.
@@ -130,6 +150,7 @@ Wrong roads, missing U-turns and missing cameras are OpenStreetMap data. Fix the
 - **Browser limits.** Guidance stops when the screen is off, and there is no CarPlay or Android Auto. That needs a native app.
 - **Lanes and speed limits.** Lanes appear only where OpenStreetMap mappers have tagged them, and arrive a few seconds after you start driving, longer when the free Valhalla server is busy. Speed limits need a TomTom key.
 - **Toll fares** use PLUS's own fare service, the one its website calculator calls. It is undocumented and can change or block outside callers at any time; fares then disappear while navigation keeps working. Only PLUS is priced, Class 1 only, without discounts. Bandar Baru Nilai and Port Dickson Utara/Selatan have no clear OpenStreetMap match and show "fare unavailable".
+- **Business search quality** follows Overture's data: some places have outdated names or positions, and a search matches word beginnings, so typos are not forgiven.
 - **Search without a TomTom key** uses Photon only. It misses many house addresses, and its nearby results only include places whose names match the category (for example Petron for petrol).
 - **Free public servers.** Valhalla (FOSSGIS), the OSRM demo server and Photon have fair-use policies and pick up map edits after a delay. Self-host Valhalla before real traffic arrives; a Malaysia–Singapore extract is small.
 - **Voices** depend on the phone. Without a Malay voice it falls back to Indonesian, then the default voice.
@@ -148,9 +169,10 @@ Bundled data and assets keep their own licenses:
 | What | License |
 | -- | -- |
 | `public/data/pois.json` and the saved route and search responses in `tests/fixtures/` | © OpenStreetMap contributors, [ODbL](https://opendatacommons.org/licenses/odbl/) |
+| `public/data/places/` (generated, not in git) | Overture Maps Foundation, [CDLA-Permissive-2.0](https://cdla.dev/permissive-2-0/) |
 | `public/fonts/` (Nunito) | [SIL Open Font License 1.1](public/fonts/OFL.txt) |
 | MapLibre GL JS, loaded from a CDN | BSD-3-Clause |
 
 ## Credits
 
-Map data © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors · tiles [OpenFreeMap](https://openfreemap.org) / OpenMapTiles · [MapLibre GL JS](https://maplibre.org) · routing [Valhalla](https://github.com/valhalla/valhalla) (FOSSGIS), [OSRM](https://project-osrm.org), [TomTom](https://developer.tomtom.com) · search [Photon](https://photon.komoot.io) (komoot) · toll fares PLUS Malaysia · font [Nunito](https://github.com/googlefonts/nunito).
+Map data © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors · tiles [OpenFreeMap](https://openfreemap.org) / OpenMapTiles · [MapLibre GL JS](https://maplibre.org) · routing [Valhalla](https://github.com/valhalla/valhalla) (FOSSGIS), [OSRM](https://project-osrm.org), [TomTom](https://developer.tomtom.com) · search [Photon](https://photon.komoot.io) (komoot) and [Overture Maps](https://overturemaps.org) places · toll fares PLUS Malaysia · font [Nunito](https://github.com/googlefonts/nunito).

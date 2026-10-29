@@ -11,11 +11,11 @@ async function send(path, init) {
 export async function health() {
   try {
     const res = await fetch('/api/health', { cache: 'no-store' });
-    if (!res.ok) return { traffic: false, reports: false, fares: false, search: false };
+    if (!res.ok) return { traffic: false, reports: false, fares: false, search: false, places: false };
     const data = await res.json();
-    return { traffic: !!data.traffic, reports: !!data.reports, fares: !!data.fares, search: !!data.search };
+    return { traffic: !!data.traffic, reports: !!data.reports, fares: !!data.fares, search: !!data.search, places: !!data.places };
   } catch {
-    return { traffic: false, reports: false, fares: false, search: false };
+    return { traffic: false, reports: false, fares: false, search: false, places: false };
   }
 }
 
