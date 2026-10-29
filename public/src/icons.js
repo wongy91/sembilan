@@ -60,7 +60,7 @@ export const UI = {
   search: svg('<circle cx="21" cy="21" r="13"/><path d="M31 31l11 11"/>'),
   close: svg('<path d="M12 12l24 24M36 12L12 36"/>'),
   locate: svg('<circle cx="24" cy="24" r="9"/><path d="M24 4v8M24 36v8M4 24h8M36 24h8"/>'),
-  report: svg('<path d="M24 6L4 41h40L24 6z"/><path d="M24 19v14M17 26h14"/>'),
+  report: svg('<path d="M13 7h22a7 7 0 0 1 7 7v13a7 7 0 0 1-7 7H23l-9 7.5V34h-1a7 7 0 0 1-7-7V14a7 7 0 0 1 7-7z" fill="currentColor" stroke="none"/><path d="M24 14v9" stroke="#f08000" stroke-width="5"/><circle cx="24" cy="29" r="3" fill="#f08000" stroke="none"/>'),
   iosShare: svg('<path d="M24 5v25"/><path d="M15 14l9-9 9 9"/><path d="M16 20h-6v23h28V20h-6"/>'),
   more: svg('<circle cx="12" cy="24" r="2"/><circle cx="24" cy="24" r="2"/><circle cx="36" cy="24" r="2"/>'),
   share: svg('<circle cx="36" cy="10" r="5"/><circle cx="12" cy="24" r="5"/><circle cx="36" cy="38" r="5"/><path d="M16.5 21.5l15-9M16.5 26.5l15 9"/>'),

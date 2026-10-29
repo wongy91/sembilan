@@ -175,16 +175,22 @@ body.searching .fab-menu {
   bottom: calc(var(--sheet-h, 0px) + 20px);
   width: 62px;
   height: 62px;
-  border-radius: 20px;
-  background: #ffb31a;
-  color: #2b1d00;
-  box-shadow: 0 8px 22px rgba(255, 170, 20, 0.45);
+  border: 3px solid var(--card);
+  border-radius: 50%;
+  background: linear-gradient(150deg, #ffc53d, #ff8a00);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(255, 138, 0, 0.42), 0 2px 6px rgba(0, 0, 0, 0.18);
+  transition: transform 0.12s ease;
   z-index: 2;
 }
 
+.fab-report:active {
+  transform: scale(0.92);
+}
+
 .fab-report svg {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
 }
 
 .pill {
@@ -1035,9 +1041,49 @@ body[data-mode='nav'] .sheet {
 
 .nav-more {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
+  gap: 10px;
   margin-top: 14px;
+}
+
+.nav-actions {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.nav-actions .tile {
+  gap: 5px;
+  padding: 11px 4px 10px;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.nav-actions .tile span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nav-actions .tile svg {
+  width: 22px;
+  height: 22px;
+}
+
+.end-trip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 50px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.end-trip svg {
+  width: 18px;
+  height: 18px;
 }
 
 .tile {
@@ -1139,11 +1185,6 @@ body.nav-alts .sheet {
 .tile svg {
   width: 24px;
   height: 24px;
-}
-
-.tile.danger {
-  background: color-mix(in srgb, var(--danger) 14%, transparent);
-  color: var(--danger);
 }
 
 .eta {

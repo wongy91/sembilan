@@ -494,11 +494,13 @@ function navSheet() {
       <button class="round" data-action="more" aria-label="${esc(t('more'))}">${UI.more}</button>
     </div>
     <div id="nav-more" class="nav-more" hidden>
-      <button class="tile" data-action="alts">${UI.routes}<span>${esc(t('routes'))}</span></button>
-      <button class="tile" data-action="overview">${UI.route}<span>${esc(t('overview'))}</span></button>
-      <button class="tile" data-action="mute">${soundTile()}</button>
-      <button class="tile" data-action="share-eta">${UI.share}<span>${esc(t('shareEta'))}</span></button>
-      <button class="tile danger" data-action="end">${UI.close}<span>${esc(t('end'))}</span></button>
+      <div class="nav-actions">
+        <button class="tile" data-action="alts">${UI.routes}<span>${esc(t('routes'))}</span></button>
+        <button class="tile" data-action="overview">${UI.route}<span>${esc(t('overview'))}</span></button>
+        <button class="tile" data-action="mute">${soundTile()}</button>
+        <button class="tile" data-action="share-eta">${UI.share}<span>${esc(t('share'))}</span></button>
+      </div>
+      <button class="btn end-trip" data-action="end">${UI.close}<span>${esc(t('endTrip'))}</span></button>
     </div>
     <div id="nav-next" class="next-poi"></div>`;
 }
