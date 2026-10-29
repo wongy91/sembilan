@@ -4,6 +4,8 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-10-29
+
 ### Added
 
 - **中文 (Simplified Chinese)**: the whole app, the turn-by-turn guidance ("500米后，左转，进入 Jalan Tun Razak") and the spoken alerts ("前方800米有测速相机，限速90"), with a Mandarin voice where the phone has one. Pick it in Settings → Language; a first visit starts in Chinese, Malay or English to match the phone.
@@ -186,7 +188,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.13.0...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.14.0...HEAD
+[0.14.0]: https://github.com/wongy91/sembilan/compare/0.13.0...0.14.0
 [0.13.0]: https://github.com/wongy91/sembilan/compare/0.12.0...0.13.0
 [0.12.0]: https://github.com/wongy91/sembilan/compare/0.11.0...0.12.0
 [0.11.0]: https://github.com/wongy91/sembilan/compare/0.10.0...0.11.0
