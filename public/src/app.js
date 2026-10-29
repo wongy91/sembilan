@@ -288,7 +288,7 @@ function placeSheet() {
       <div><h2>${esc(p.name)}</h2><p class="muted">${esc(p.sub)}</p></div>
       <button class="icon-btn" data-action="close" aria-label="${esc(t('close'))}">${UI.close}</button>
     </div>
-    <button class="btn primary big block" data-action="directions">${esc(t('directions'))}</button>
+    <button class="btn primary big block" data-action="directions">${esc(t('directions'))}${state.placeEta ? ` · ${esc(fmtDuration(state.placeEta))}` : ''}</button>
     <div class="quick-actions">
       <button class="quick" data-action="set-home"><span>🏠</span>${esc(t('setHome'))}</button>
       <button class="quick" data-action="set-work"><span>💼</span>${esc(t('setWork'))}</button>
@@ -601,9 +601,31 @@ async function runNearby(cat) {
   }
 }
 
+const routeKey = (place) => `${place.lon.toFixed(5)},${place.lat.toFixed(5)}|${+settings.avoidTolls}${+settings.avoidHighways}${+state.backend.traffic}`;
+
+function routeOptions() {
+  return { avoidTolls: settings.avoidTolls, avoidHighways: settings.avoidHighways, liveTraffic: state.backend.traffic };
+}
+
+function prefetchRoutes(place) {
+  state.prefetch = null;
+  if (!state.fix) return;
+  const from = [state.fix.lon, state.fix.lat];
+  const entry = { key: routeKey(place), from, at: Date.now(), promise: planRoutes(from, [place.lon, place.lat], routeOptions()) };
+  state.prefetch = entry;
+  entry.promise
+    .then((routes) => {
+      if (state.prefetch !== entry || state.mode !== 'place' || state.place !== place) return;
+      state.placeEta = Math.min(...routes.map((r) => r.duration));
+      render();
+    })
+    .catch(() => {});
+}
+
 function selectPlace(place) {
   state.planAbort?.abort();
   state.place = place;
+  state.placeEta = null;
   state.mode = 'place';
   state.routes = [];
   map.clearRoutes();
@@ -612,6 +634,7 @@ function selectPlace(place) {
   map.showPin([place.lon, place.lat]);
   render();
   map.flyTo([place.lon, place.lat], 15);
+  prefetchRoutes(place);
 }
 
 async function dropPin(lonLat) {
@@ -668,12 +691,11 @@ async function plan() {
   state.planAbort?.abort();
   const ctrl = (state.planAbort = new AbortController());
   try {
-    const routes = await planRoutes([state.fix.lon, state.fix.lat], [dest.lon, dest.lat], {
-      avoidTolls: settings.avoidTolls,
-      avoidHighways: settings.avoidHighways,
-      liveTraffic: state.backend.traffic,
-      signal: ctrl.signal,
-    });
+    const here = [state.fix.lon, state.fix.lat];
+    const fresh = () => planRoutes(here, [dest.lon, dest.lat], { ...routeOptions(), signal: ctrl.signal });
+    const pre = state.prefetch;
+    const reuse = pre && pre.key === routeKey(dest) && Date.now() - pre.at < 120000 && haversine(pre.from, here) < 150;
+    const routes = await (reuse ? pre.promise.catch(fresh) : fresh());
     if (ctrl.signal.aborted) return;
     routes.sort((a, b) => a.duration - b.duration);
     state.routes = routes;
@@ -1044,6 +1066,7 @@ function handleFix(fix) {
   }
   state.fix = fix;
   if (state.nav) return navTick(fix);
+  if (state.mode === 'place' && !state.prefetch) prefetchRoutes(state.place);
   map.setUser([fix.lon, fix.lat], fix.heading, false);
   if (!state.centered && state.mode === 'home') {
     state.centered = true;
