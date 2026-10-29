@@ -4,6 +4,8 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-29
+
 ### Added
 
 - Errors that happen in the app are reported to the Worker's logs, so problems show up without a screenshot. Coordinates, IP addresses and web-address details are removed first, and at most five reports are sent per visit.
@@ -14,14 +16,14 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 - The Worker limits how often one visitor can call the endpoints that use TomTom and PLUS (120 a minute for search, routing, fares and error reports; 600 traffic tiles a minute), so a single script can't use up the shared TomTom allowance.
 
-### Security
-
-- The Worker no longer keeps a log line for every request. Those lines held the request address, which for search includes what you typed and your approximate position; Cloudflare kept them for 3 days. Only error reports and Worker crashes are logged now.
-- Security headers on every page and file: a Content-Security-Policy that allows only the services Sembilan uses, plus `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` and `Permissions-Policy`. Anything the policy blocks is reported like other errors.
-
 ### Fixed
 
 - A browser that can't draw the map (WebGL turned off or unsupported, or the map library failed to download) showed a blank app with no text. Sembilan now explains why and still lets you search, use Home, Work and saved places, and open a place in Waze or Google Maps.
+
+### Security
+
+- The Worker no longer keeps a log line for every request. Those lines held the request address, which for search includes what you typed and your position; Cloudflare kept them for 3 days. Only error reports and Worker crashes are logged now.
+- Security headers on every page and file: a Content-Security-Policy that allows only the services Sembilan uses, plus `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` and `Permissions-Policy`. Anything the policy blocks is reported like other errors.
 
 ## [0.10.0] - 2026-10-29
 
@@ -160,7 +162,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.10.0...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.11.0...HEAD
+[0.11.0]: https://github.com/wongy91/sembilan/compare/0.10.0...0.11.0
 [0.10.0]: https://github.com/wongy91/sembilan/compare/0.9.1...0.10.0
 [0.9.1]: https://github.com/wongy91/sembilan/compare/0.9.0...0.9.1
 [0.9.0]: https://github.com/wongy91/sembilan/compare/0.8.1...0.9.0
