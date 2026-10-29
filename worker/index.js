@@ -13,6 +13,7 @@ const searchCache = new Map();
 const NEARBY_CATEGORIES = { fuel: '7311', food: '7315', parking: '7369,7313', ev: '7309' };
 const placesChunks = new Map();
 let placesManifest = null;
+const THROTTLED = { '/api/search': 'search', '/api/route': 'route', '/api/fares': 'fares', '/api/log': 'log' };
 
 class HttpError extends Error {
   constructor(status, message) {
@@ -46,6 +47,12 @@ async function body(request) {
   } catch {
     throw new HttpError(400, 'invalid JSON');
   }
+}
+
+async function throttle(limiter, request, group) {
+  if (!limiter) return;
+  const { success } = await limiter.limit({ key: `${group}:${request.headers.get('cf-connecting-ip') || 'local'}` });
+  if (!success) throw new HttpError(429, 'too many requests, try again in a minute');
 }
 
 async function reporterId(request, env, now) {
@@ -338,13 +345,17 @@ async function api(request, env, ctx, url) {
   if (pathname === '/api/health' && method === 'GET') {
     return json({ ok: true, traffic: !!env.TOMTOM_API_KEY, reports: !!env.DB, fares: true, search: !!env.TOMTOM_API_KEY, places: await hasPlaces(env, url) });
   }
+  if (THROTTLED[pathname]) await throttle(env.API_LIMIT, request, THROTTLED[pathname]);
   if (pathname === '/api/search' && method === 'GET') return search(env, url, now);
   if (pathname === '/api/places' && method === 'GET') return places(env, url);
   if (pathname === '/api/route' && method === 'POST') return route(request, env);
   if (pathname === '/api/fares' && method === 'POST') return fares(request, now);
   if (pathname === '/api/log' && method === 'POST') return logError(request);
   const tile = /^\/api\/traffic\/(\d+)\/(\d+)\/(\d+)\.png$/.exec(pathname);
-  if (tile && method === 'GET') return trafficTile(env, ctx, url, tile);
+  if (tile && method === 'GET') {
+    await throttle(env.TILE_LIMIT, request, 'tile');
+    return trafficTile(env, ctx, url, tile);
+  }
   if (pathname === '/api/reports' && method === 'GET') return listReports(env, url, now);
   if (pathname === '/api/reports' && method === 'POST') return createReport(request, env, now);
   const voting = /^\/api\/reports\/([0-9a-f-]{36})\/vote$/.exec(pathname);

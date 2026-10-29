@@ -13,6 +13,25 @@
 	"observability": {
 		"enabled": true
 	},
+	// Per-visitor limits on the endpoints that call TomTom and PLUS. Forks: each namespace_id must be unique in your Cloudflare account.
+	"ratelimits": [
+		{
+			"name": "API_LIMIT",
+			"namespace_id": "1001",
+			"simple": {
+				"limit": 120,
+				"period": 60
+			}
+		},
+		{
+			"name": "TILE_LIMIT",
+			"namespace_id": "1002",
+			"simple": {
+				"limit": 600,
+				"period": 60
+			}
+		}
+	],
 	// Secrets are set with `npx wrangler secret put <NAME>`, never in this file (see README → Configuration).
 	"triggers": {
 		"crons": [

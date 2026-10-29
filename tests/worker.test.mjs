@@ -276,6 +276,34 @@ test('coarse browser names for the error log', () => {
   assert.equal(browserOf(''), 'other');
 });
 
+test('rate limits: each visitor gets its own budget per endpoint, and a spent budget answers 429', async () => {
+  const keys = [];
+  const limiter = (max) => {
+    const counts = new Map();
+    return {
+      async limit({ key }) {
+        keys.push(key);
+        counts.set(key, (counts.get(key) || 0) + 1);
+        return { success: counts.get(key) <= max };
+      },
+    };
+  };
+  const env = { TOMTOM_API_KEY: 'k', API_LIMIT: limiter(1), TILE_LIMIT: limiter(1) };
+  const upstream = async (url) => (String(url).includes('/traffic/') ? new Response('png') : Response.json({ results: [], routes: [] }));
+  const search = '/api/search?q=rate%20limit%20test&lat=3.1&lon=101.7';
+  const route = { method: 'POST', body: { from: [101.712, 3.1579], to: [101.0901, 4.5975] } };
+  await withFetch(upstream, async () => {
+    assert.equal((await call(env, search)).status, 200);
+    assert.equal((await call(env, search)).status, 429);
+    assert.equal((await call(env, search, { ip: '10.0.0.2' })).status, 200, 'another visitor is not affected');
+    assert.equal((await call(env, '/api/route', route)).status, 200, 'routing has its own budget');
+    assert.equal((await call(env, '/api/traffic/10/806/494.png')).status, 200);
+    assert.equal((await call(env, '/api/traffic/10/806/494.png')).status, 429);
+    assert.equal((await call(env, '/api/health')).status, 200, 'health is never limited');
+  });
+  assert.deepEqual(keys, ['search:10.0.0.1', 'search:10.0.0.1', 'search:10.0.0.2', 'route:10.0.0.1', 'tile:10.0.0.1', 'tile:10.0.0.1']);
+});
+
 test('non-API paths go to static assets', async () => {
   const env = { ASSETS: { fetch: async () => new Response('index') } };
   assert.equal(await (await worker.fetch(new Request('https://sembilan.test/'), env, ctx)).text(), 'index');
