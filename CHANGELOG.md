@@ -4,6 +4,17 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-29
+
+### Added
+
+- Nearby chips under the search bar: ⛽ Petrol, 🍜 Food, 🅿️ Parking and 🔌 EV charging, listed by distance. They also work from search while navigating.
+- Every search result shows how far away it is.
+
+### Changed
+
+- Address search is much better with a TomTom key: queries that look like addresses (house numbers, Jalan, Taman, Lot…) also ask TomTom through the Worker, and TomTom fills in when the free search finds fewer than 3 places. The key never reaches the browser, and results are cached for 6 hours.
+
 ## [0.4.2] - 2026-10-29
 
 ### Changed
@@ -77,7 +88,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.4.2...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.5.0...HEAD
+[0.5.0]: https://github.com/wongy91/sembilan/compare/0.4.2...0.5.0
 [0.4.2]: https://github.com/wongy91/sembilan/compare/0.4.1...0.4.2
 [0.4.1]: https://github.com/wongy91/sembilan/compare/0.4.0...0.4.1
 [0.4.0]: https://github.com/wongy91/sembilan/compare/0.3.2...0.4.0
