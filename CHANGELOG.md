@@ -4,6 +4,16 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-29
+
+### Added
+
+- Search finds about 880,000 shops, restaurants and other businesses in Malaysia and Singapore from Overture Maps, including ones missing from OpenStreetMap and TomTom, such as "Signature Ayu Borneo @ Bloomsvale". The index is built with `npm run data:places` (needs DuckDB) and searched by the Worker.
+
+### Changed
+
+- Search results that match every word you typed come first. "mcdonalds" now also matches "McDonald's".
+
 ## [0.9.1] - 2026-10-29
 
 ### Changed
@@ -131,7 +141,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.9.1...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.10.0...HEAD
+[0.10.0]: https://github.com/wongy91/sembilan/compare/0.9.1...0.10.0
 [0.9.1]: https://github.com/wongy91/sembilan/compare/0.9.0...0.9.1
 [0.9.0]: https://github.com/wongy91/sembilan/compare/0.8.1...0.9.0
 [0.8.1]: https://github.com/wongy91/sembilan/compare/0.8.0...0.8.1
