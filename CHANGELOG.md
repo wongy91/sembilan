@@ -4,6 +4,16 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-29
+
+### Added
+
+- The Go button on a place shows the drive time, for example "Go · 22 min".
+
+### Changed
+
+- Route planning starts as soon as you open a place, so tapping Go shows the routes almost instantly: 1.3 s to 0.03 s on fast 4G, 1.2 s to 0.03 s on a weak signal (median, KLCC to Mid Valley).
+
 ## [0.8.1] - 2026-10-29
 
 ### Fixed
@@ -114,7 +124,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.8.1...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.9.0...HEAD
+[0.9.0]: https://github.com/wongy91/sembilan/compare/0.8.1...0.9.0
 [0.8.1]: https://github.com/wongy91/sembilan/compare/0.8.0...0.8.1
 [0.8.0]: https://github.com/wongy91/sembilan/compare/0.7.0...0.8.0
 [0.7.0]: https://github.com/wongy91/sembilan/compare/0.6.0...0.7.0
