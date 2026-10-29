@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import worker, { purge } from '../worker/index.js';
+import worker, { browserOf, purge } from '../worker/index.js';
+import { scrub } from '../public/src/text.js';
 import { createLocalD1 } from '../scripts/d1-local.mjs';
 
 const ctx = { waitUntil() {} };
@@ -228,6 +229,51 @@ test('search proxy validates input and needs a TomTom key', async () => {
   assert.equal((await call(env, '/api/search?cat=casino&lat=3.1&lon=101.7')).status, 400);
   const failed = await withFetch(async () => new Response('', { status: 500 }), () => call(env, '/api/search?q=jalan%20ampang&lat=3.1&lon=101.7'));
   assert.equal(failed.status, 502);
+});
+
+test('error reports drop coordinates, IP addresses and URL queries before they are logged', () => {
+  assert.equal(
+    scrub('Route failed at 3.15791,101.71234 via https://router.project-osrm.org/route/v1/driving/101.712,3.1579;101.09,4.59?overview=full#x'),
+    'Route failed at #,# via https://router.project-osrm.org/route/v1/driving/#,#;#,#',
+  );
+  assert.equal(scrub('plan@https://sembilan.nav9.workers.dev/src/app.js:712:9'), 'plan@https://sembilan.nav9.workers.dev/src/app.js:712:9');
+  assert.equal(scrub('blocked 203.0.113.7'), 'blocked #');
+  assert.equal(scrub('x'.repeat(900)).length, 600);
+});
+
+test('error log: records a scrubbed report with a coarse browser name, never the raw user agent', async () => {
+  const logged = [];
+  const original = console.error;
+  console.error = (entry) => logged.push(entry);
+  try {
+    const ua = 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1';
+    const res = await worker.fetch(
+      new Request('https://sembilan.test/api/log', {
+        method: 'POST',
+        headers: { 'user-agent': ua },
+        body: JSON.stringify({ message: 'Failed near 3.1579123', stack: 'at x (https://a.test/src/app.js:1:2)', release: '0.11.0', build: 'abc1234', mode: '<script>' }),
+      }),
+      {},
+      ctx,
+    );
+    assert.equal(res.status, 204);
+    assert.deepEqual(logged, [
+      { event: 'client-error', message: 'Failed near #', stack: 'at x (https://a.test/src/app.js:1:2)', release: '0.11.0', build: 'abc1234', mode: '', browser: 'Safari 26 on iOS 26' },
+    ]);
+    assert.equal((await call({}, '/api/log', { method: 'POST', body: { message: '' } })).status, 400);
+  } finally {
+    console.error = original;
+  }
+});
+
+test('coarse browser names for the error log', () => {
+  const chromeAndroid = 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36';
+  const edge = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0';
+  const homeScreen = 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148';
+  assert.equal(browserOf(chromeAndroid), 'Chrome 131 on Android 15');
+  assert.equal(browserOf(edge), 'Edge 131 on Windows');
+  assert.equal(browserOf(homeScreen), 'iOS 26');
+  assert.equal(browserOf(''), 'other');
 });
 
 test('non-API paths go to static assets', async () => {

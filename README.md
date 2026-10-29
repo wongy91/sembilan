@@ -63,8 +63,8 @@ npm test       # 64 tests
      │              │             │                    │ /api/fares    PLUS toll fares        │
      ▼              ▼             ▼                    │ /api/search   TomTom search, nearby  │
  Valhalla /      Photon       OpenFreeMap              │ /api/places   Overture places index  │
- OSRM            (search)     (map tiles)              └──────────────────────────────────────┘
- (routes, lanes)
+ OSRM            (search)     (map tiles)              │ /api/log      browser error reports  │
+ (routes, lanes)                                       └──────────────────────────────────────┘
 ```
 
 1. **Routes.** The app asks TomTom through the Worker when a TomTom key is set, then falls back to Valhalla (FOSSGIS), then to the OSRM demo server. All three are converted to one route format in `public/src/providers.js`.
@@ -72,6 +72,7 @@ npm test       # 64 tests
 3. **Extras on each route.** Toll plazas, speed cameras and R&R come from a bundled OpenStreetMap extract (`public/data/pois.json`). PLUS fares come from `/api/fares`. When you start driving, Valhalla traces the route you chose (whichever provider planned it) and returns the OpenStreetMap lane markings along it, 190 km at a time.
 4. **Guidance.** `public/src/navigator.js` snaps each GPS fix to the route, decides what to say and when, and detects when you leave the route.
 5. **Without the Worker** the app still routes, guides and alerts. Live traffic, reports and fares switch on only when `/api/health` reports them.
+6. **Errors.** `public/src/errors.js` sends uncaught browser errors to `/api/log`, at most five per visit. The Worker writes them to [Workers Logs](https://developers.cloudflare.com/workers/observability/logs/workers-logs/) (`observability` in `wrangler.jsonc`), where they appear as `client-error` events. Numbers with decimals (coordinates, IP addresses) and the query part of web addresses are removed on the phone and again in the Worker, and the browser is logged as a coarse name such as "Safari 26 on iOS 26".
 
 ### Project layout
 
@@ -79,6 +80,7 @@ npm test       # 64 tests
 | -- | -- |
 | `public/` | The web app, served as static files |
 | `public/src/app.js` | Screens, state and wiring |
+| `public/src/errors.js` | Sends browser errors to `/api/log` |
 | `public/src/map.js` | Map view, route drawing, smooth driving camera |
 | `public/src/navigator.js` | Guidance engine: snapping, announcements, off-route detection |
 | `public/src/providers.js`, `routing.js` | Route requests and conversion from Valhalla, OSRM and TomTom |
@@ -121,7 +123,7 @@ Everything secret is a Worker secret, set with `npx wrangler secret put <NAME>`.
 | `REPORT_SALT` | Secret, recommended | Keeps reporter hashes from being traced back to IP addresses. Set it to a long random value |
 | `DB` | D1 binding | Community reports. Without it, reports are switched off |
 
-**Privacy.** Sembilan has no accounts and doesn't store anyone's location. Saved places stay on your phone; a **Copy my places** link carries them after the `#`, which browsers never send to a server. Your start point and destination go to the routing provider to plan the trip. A community report stores its type, position, heading, times and votes. To rate-limit reports and votes without storing IP addresses, it also stores a hash of the reporter's IP that changes daily.
+**Privacy.** Sembilan has no accounts and doesn't store anyone's location. Saved places stay on your phone; a **Copy my places** link carries them after the `#`, which browsers never send to a server. Your start point and destination go to the routing provider to plan the trip. A community report stores its type, position, heading, times and votes. To rate-limit reports and votes without storing IP addresses, it also stores a hash of the reporter's IP that changes daily. Error reports carry the error message, the app version, the screen it happened on and a coarse browser name, with coordinates and IP addresses removed; Workers Logs keeps them for 3 days on the free plan.
 
 ## Data
 

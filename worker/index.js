@@ -1,4 +1,5 @@
 import { searchIndex } from './places.js';
+import { scrub } from '../public/src/text.js';
 
 const REGION = [99.0, 0.5, 120.0, 8.0];
 const REPORT_TTL_MIN = { accident: 90, police: 60, hazard: 120, jam: 30, closure: 240, flood: 360, pothole: 1440 };
@@ -288,6 +289,42 @@ async function createReport(request, env, now) {
   return json({ id, kind, lat, lon, heading, expiresAt }, 201);
 }
 
+const BROWSERS = [
+  ['Edge', /Edg(?:iOS|A)?\/(\d+)/],
+  ['Samsung Internet', /SamsungBrowser\/(\d+)/],
+  ['Firefox', /(?:Firefox|FxiOS)\/(\d+)/],
+  ['Chrome', /(?:CriOS|Chrome)\/(\d+)/],
+  ['Safari', /Version\/(\d+)/],
+];
+
+export function browserOf(ua) {
+  const ios = /(?:iPhone|iPad|iPod).* OS (\d+)_/.exec(ua);
+  const android = /Android (\d+)/.exec(ua);
+  const os = ios ? `iOS ${ios[1]}` : android ? `Android ${android[1]}` : /Mac OS X/.test(ua) ? 'macOS' : /Windows/.test(ua) ? 'Windows' : 'other';
+  for (const [name, pattern] of BROWSERS) {
+    const match = pattern.exec(ua);
+    if (match) return `${name} ${match[1]} on ${os}`;
+  }
+  return os;
+}
+
+async function logError(request) {
+  const input = await body(request);
+  const message = scrub(input.message);
+  if (!message) throw new HttpError(400, 'message is required');
+  const tag = (value) => (/^[\w.-]{1,20}$/.test(value) ? value : '');
+  console.error({
+    event: 'client-error',
+    message,
+    stack: scrub(input.stack),
+    release: tag(input.release),
+    build: tag(input.build),
+    mode: tag(input.mode),
+    browser: browserOf(request.headers.get('user-agent') || ''),
+  });
+  return new Response(null, { status: 204 });
+}
+
 export async function purge(db, now) {
   const cutoff = now - 86400000;
   await db.prepare('DELETE FROM votes WHERE report_id IN (SELECT id FROM reports WHERE expires_at < ?)').bind(cutoff).run();
@@ -305,6 +342,7 @@ async function api(request, env, ctx, url) {
   if (pathname === '/api/places' && method === 'GET') return places(env, url);
   if (pathname === '/api/route' && method === 'POST') return route(request, env);
   if (pathname === '/api/fares' && method === 'POST') return fares(request, now);
+  if (pathname === '/api/log' && method === 'POST') return logError(request);
   const tile = /^\/api\/traffic\/(\d+)\/(\d+)\/(\d+)\.png$/.exec(pathname);
   if (tile && method === 'GET') return trafficTile(env, ctx, url, tile);
   if (pathname === '/api/reports' && method === 'GET') return listReports(env, url, now);
