@@ -1021,8 +1021,9 @@ body[data-mode='nav'] .sheet {
 }
 
 .dialog {
+  inset-block: var(--safe-top) var(--safe-bottom);
   width: min(460px, calc(100% - 24px));
-  max-height: calc(100% - 48px);
+  max-height: calc(100% - var(--safe-top) - var(--safe-bottom) - 32px);
   padding: 0;
   border: 0;
   border-radius: 26px;
@@ -1055,6 +1056,10 @@ body[data-mode='nav'] .sheet {
   margin: 0;
   font-size: 24px;
   font-weight: 900;
+}
+
+.dialog h2:focus {
+  outline: none;
 }
 
 .dialog h3 {
