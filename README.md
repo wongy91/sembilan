@@ -21,7 +21,7 @@ Free, open-source turn-by-turn navigation for Malaysia that runs in the browser.
 | Map | Day and night themes (automatic by time), 2D or 3D buildings, long-press to drop a pin |
 | While driving | Speedometer with speed-limit sign, current street name, quick mute, search and settings, share ETA, arrival screen, screen stays awake |
 | Saved places | Home, Work, your own named places (⭐ Save on any place) and recent places, kept on your phone. **Copy my places** makes a private link that adds them on another phone or in the home-screen app |
-| Offline and install | Opens instantly from an offline copy; install it to the home screen (Android, iPhone) or the Dock (Mac Safari). When a new version is ready, a small Restart prompt appears; it never interrupts navigation |
+| Offline and install | Opens instantly from an offline copy. An **Install app** card installs it in one tap where the browser allows it, and otherwise shows step-by-step instructions for iPhone Safari, other iPhone browsers, Android, Mac Safari and in-app browsers. When a new version is ready, a small Restart prompt appears; it never interrupts navigation |
 
 ## Quick start
 

@@ -55,9 +55,26 @@ const isMacSafari =
   navigator.maxTouchPoints === 0 &&
   !/Chrome|Chromium|Edg|Firefox|OPR/.test(navigator.userAgent) &&
   Number(/Version\/(\d+)/.exec(navigator.userAgent)?.[1]) >= 17;
-const installSteps = isIOS ? 'installIos' : isMacSafari ? 'installMac' : null;
-const canInstall = () => !installed() && (!!state.installPrompt || !!installSteps);
-const offerInstall = () => canInstall() && (onPhone() || isMacSafari);
+const inAppBrowser = /FBAN|FBAV|FB_IAB|Instagram|Line\/|Twitter|MicroMessenger|TikTok/i.test(navigator.userAgent);
+const installGuide = inAppBrowser
+  ? 'inapp'
+  : isIOS
+    ? /CriOS|FxiOS|EdgiOS|OPiOS/.test(navigator.userAgent) ? 'iosOther' : 'ios'
+    : isMacSafari
+      ? 'mac'
+      : /Android/i.test(navigator.userAgent)
+        ? 'android'
+        : null;
+const GUIDE_STEPS = {
+  ios: ['stepIosShare', 'stepAddHome', 'stepAdd'],
+  iosOther: ['stepBarShare', 'stepAddHome', 'stepAdd'],
+  android: ['stepMenu', 'stepInstall', 'stepConfirm'],
+  mac: ['stepMacShare', 'stepDock', 'stepMacAdd'],
+  inapp: ['stepOpenBrowser'],
+};
+const canInstall = () => !installed() && (!!state.installPrompt || !!installGuide);
+const offerInstall = () => canInstall() && (onPhone() || isMacSafari || !!state.installPrompt);
+const installSnoozed = () => settings.installSnoozedUntil > Date.now();
 
 const isNight = () => {
   if (settings.night !== 'auto') return settings.night === 'night';
@@ -218,18 +235,32 @@ function shortcut(key) {
     </button>`;
 }
 
-function installStepsText() {
-  return esc(t(installSteps, { share: '{share}' })).replace('{share}', `<span class="ios-share">${UI.iosShare}</span>`);
+function installCard() {
+  return `<div class="install-cta">
+      <button class="install-close" type="button" data-action="install-later" aria-label="${esc(t('notNow'))}">${UI.close}</button>
+      <div class="install-head"><img src="icons/icon-192.png" alt="" width="52" height="52"><div><b>${esc(t('installTitle'))}</b><small>${esc(t('installPitch'))}</small></div></div>
+      <button class="btn install-go" type="button" data-action="install">${UI.download}${esc(t('install'))}</button>
+    </div>`;
 }
 
-function installCard() {
-  const ios = !state.installPrompt;
-  return `<div class="install-card">
-      <img src="icons/icon-192.png" alt="" width="44" height="44">
-      <div><b>${esc(t('installTitle'))}</b><small>${ios ? installStepsText() : esc(t('installWhy'))}</small></div>
-      ${ios ? '' : `<button class="btn primary" data-action="install">${esc(t('installNow'))}</button>`}
-      <button class="icon-btn" data-action="install-later" aria-label="${esc(t('notNow'))}">${UI.close}</button>
-    </div>`;
+function guideStep(key) {
+  const icon = (svg) => `<span class="inline-icon">${svg}</span>`;
+  return esc(t(key, { share: '{share}', add: '{add}', menu: '{menu}' }))
+    .replace('{share}', icon(UI.iosShare))
+    .replace('{add}', icon(UI.addSquare))
+    .replace('{menu}', icon(UI.kebab));
+}
+
+function openInstallGuide() {
+  const steps = GUIDE_STEPS[installGuide] || [];
+  $('install-guide').innerHTML = steps.map((k, i) => `<li><span class="step-n">${i + 1}</span><span>${guideStep(k)}</span></li>`).join('');
+  $('install-copy').hidden = installGuide !== 'inapp';
+  $('dlg-install').showModal();
+}
+
+function startInstall() {
+  if (state.installPrompt) return promptInstall();
+  if (installGuide) openInstallGuide();
 }
 
 function homeSheet() {
@@ -240,7 +271,7 @@ function homeSheet() {
         `<button class="list-item" data-action="recent" data-i="${i}"><span class="li-icon">🕘</span><span><b>${esc(p.name)}</b><small>${esc(p.sub)}</small></span></button>`,
     )
     .join('');
-  const install = offerInstall() && !settings.installDismissed ? installCard() : '';
+  const install = offerInstall() && !installSnoozed() ? installCard() : '';
   const shown = state.showAllSaved ? settings.saved : settings.saved.slice(0, 5);
   const saved = shown
     .map((s, i) => `<button class="list-item" data-action="fav" data-i="${i}"><span class="li-icon">⭐</span><span><b>${esc(s.label)}</b><small>${esc(s.label !== s.name ? s.name : s.sub)}</small></span></button>`)
@@ -1056,8 +1087,7 @@ function fillSettings() {
     `<option value="">${esc(t('voiceAuto'))}</option>` +
     voices.map((v) => `<option value="${esc(v.voiceURI)}">${esc(v.name)} (${esc(v.lang)})</option>`).join('');
   $('set-voice-name').value = voices.some((v) => v.voiceURI === settings.voiceURI) ? settings.voiceURI : '';
-  $('install-steps').hidden = !installSteps || installed();
-  if (installSteps) $('install-steps').innerHTML = `<b>${esc(t('installTitle'))}</b><br>${installStepsText()}`;
+  $('btn-install').hidden = !canInstall();
   $('app-version').textContent = t('version', { v: RELEASE, build: BUILD });
 }
 
@@ -1216,7 +1246,11 @@ function bindUi() {
     voice.unlock();
     voice.say([{ text: t('voiceTest'), priority: 2 }], { force: true });
   });
-  $('btn-install').addEventListener('click', promptInstall);
+  $('btn-install').addEventListener('click', () => {
+    $('dlg-settings').close();
+    startInstall();
+  });
+  $('install-copy').addEventListener('click', () => share(t('installTitle'), `${location.origin}/`));
   $('btn-copy-places').addEventListener('click', copyPlaces);
   $('dlg-save').addEventListener('close', closeSaveDialog);
   $('update-later').innerHTML = UI.close;
@@ -1335,10 +1369,10 @@ function bindUi() {
       case 'nearby':
         return runNearby(target.dataset.cat);
       case 'install':
-        return promptInstall();
+        return startInstall();
       case 'install-later':
         if (state.mode === 'arrived') state.installAfterTrip = false;
-        else changeSetting('installDismissed', true);
+        else changeSetting('installSnoozedUntil', Date.now() + 7 * 86400000);
         return render();
       case 'route':
         return selectRoute(i);

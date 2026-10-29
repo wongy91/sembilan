@@ -572,61 +572,121 @@ body[data-mode='nav'] .grab {
   color: var(--muted);
 }
 
-.install-card {
+.install-cta {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #1d72ff, #0a2577);
+  color: #fff;
+  text-align: left;
+  box-shadow: 0 10px 24px rgba(29, 114, 255, 0.35);
+}
+
+.install-head {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-top: 12px;
-  padding: 12px 6px 12px 12px;
-  border-radius: 18px;
-  background: var(--accent-soft);
-  text-align: left;
+  padding-right: 28px;
 }
 
-.install-card img {
+.install-head img {
   flex: none;
-  border-radius: 12px;
+  border-radius: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
-.install-card > div {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
+.install-head b {
+  display: block;
+  font-size: 18px;
+  font-weight: 900;
 }
 
-.install-card small {
-  color: var(--muted);
+.install-head small {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
   line-height: 1.35;
+  opacity: 0.88;
 }
 
-.install-card .btn {
-  flex: none;
-  min-height: 40px;
-  padding: 0 16px;
+.install-go {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 50px;
+  background: #fff;
+  color: #0a2577;
+  font-size: 17px;
+  font-weight: 900;
 }
 
-.install-card .icon-btn {
-  width: 36px;
-  height: 36px;
+.install-go svg {
+  width: 20px;
+  height: 20px;
 }
 
-.install-card .icon-btn svg {
-  width: 18px;
-  height: 18px;
+.install-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
 }
 
-.arrived .install-card {
+.install-close svg {
+  width: 16px;
+  height: 16px;
+}
+
+.arrived .install-cta {
   width: 100%;
 }
 
-.ios-share svg {
+.steps {
+  display: grid;
+  gap: 14px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.step-n {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 900;
+}
+
+.inline-icon svg {
   display: inline-block;
-  width: 16px;
-  height: 16px;
-  margin: 0 1px;
-  vertical-align: -3px;
+  width: 20px;
+  height: 20px;
+  margin: 0 2px;
+  vertical-align: -4px;
+  color: var(--accent);
 }
 
 .shortcuts {
