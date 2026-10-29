@@ -4,6 +4,17 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-29
+
+### Added
+
+- **Copy my places** in Settings: a private link with your Home, Work and recent places. Open it, or paste it into search, to add them on another phone or in the iPhone home-screen app, whose storage is separate from Safari's. The places travel after the `#`, so they never reach a server.
+- Saving Home or Work asks the browser to keep the app's storage, so the phone is less likely to clear it.
+
+### Fixed
+
+- Settings and Report no longer slide under the status bar in the iPhone home-screen app, and the close button no longer shows a blue focus ring when a dialog opens.
+
 ## [0.3.2] - 2026-10-29
 
 ### Fixed
@@ -54,7 +65,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.3.2...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.4.0...HEAD
+[0.4.0]: https://github.com/wongy91/sembilan/compare/0.3.2...0.4.0
 [0.3.2]: https://github.com/wongy91/sembilan/compare/0.3.1...0.3.2
 [0.3.1]: https://github.com/wongy91/sembilan/compare/0.3.0...0.3.1
 [0.3.0]: https://github.com/wongy91/sembilan/compare/0.2.0...0.3.0
