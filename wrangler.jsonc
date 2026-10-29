@@ -2,6 +2,10 @@
 	"name": "sembilan",
 	"main": "worker/index.js",
 	"compatibility_date": "2026-10-28",
+	// Generates public/sw.js, stamped with a hash of the app files so phones pick up each deploy.
+	"build": {
+		"command": "node scripts/stamp-sw.mjs"
+	},
 	"assets": {
 		"directory": "./public",
 		"binding": "ASSETS"
