@@ -934,7 +934,7 @@ body[data-mode='nav'] .sheet {
 
 .nav-more {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 8px;
   margin-top: 14px;
 }
@@ -949,6 +949,90 @@ body[data-mode='nav'] .sheet {
   background: var(--field);
   font-size: 13px;
   font-weight: 800;
+}
+
+body.nav-alts .sheet {
+  max-height: calc(100% - var(--safe-top) - 120px);
+}
+
+.alt-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 20px;
+  background: var(--field);
+}
+
+.alt-card.current {
+  background: var(--accent-soft);
+}
+
+.alt-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.alt-top b {
+  display: block;
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.alt-top small {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.alt-top .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  min-height: 44px;
+  padding: 0 18px;
+}
+
+.alt-top .btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.alt-card:not(.current) .alt-top .btn {
+  min-width: 96px;
+  justify-content: center;
+}
+
+.alt-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.alt-strip svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+  transform: rotate(90deg);
+}
+
+.alt-strip > span {
+  position: relative;
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line);
+}
+
+.alt-strip i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 3px;
 }
 
 .tile svg {

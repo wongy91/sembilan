@@ -64,6 +64,8 @@ export const UI = {
   iosShare: svg('<path d="M24 5v25"/><path d="M15 14l9-9 9 9"/><path d="M16 20h-6v23h28V20h-6"/>'),
   more: svg('<circle cx="12" cy="24" r="2"/><circle cx="24" cy="24" r="2"/><circle cx="36" cy="24" r="2"/>'),
   share: svg('<circle cx="36" cy="10" r="5"/><circle cx="12" cy="24" r="5"/><circle cx="36" cy="38" r="5"/><path d="M16.5 21.5l15-9M16.5 26.5l15 9"/>'),
+  navArrow: svg('<path d="M24 6l14 34-14-8-14 8z" fill="currentColor" stroke-width="3"/>'),
+  routes: svg('<circle cx="24" cy="40" r="4"/><path d="M24 36V24c0-6-12-6-12-14V6"/><path d="M24 24c0-6 12-6 12-14V6"/><path d="M7 11l5-5 5 5M31 11l5-5 5 5"/>'),
   route: svg('<circle cx="12" cy="38" r="5"/><circle cx="36" cy="10" r="5"/><path d="M16 35c8-4 4-12 12-14s6-6 6-6"/>'),
   sound: svg('<path d="M8 18h8l10-8v28l-10-8H8z"/><path d="M33 17a10 10 0 0 1 0 14M38 12a17 17 0 0 1 0 24"/>'),
   muted: svg('<path d="M8 18h8l10-8v28l-10-8H8z"/><path d="M34 19l10 10M44 19L34 29"/>'),

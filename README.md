@@ -10,7 +10,7 @@ Free, open-source turn-by-turn navigation for Malaysia that runs in the browser.
 | Area | What you get |
 | -- | -- |
 | Voice guidance | English or Bahasa Melayu, generated in the app: "Dalam 2 kilometer, ambil susur keluar 137 ke arah Simpang Pulai, Batu Gajah" |
-| Routing | Up to 3 alternatives, avoid tolls or highways, automatic reroute when you leave the route |
+| Routing | Up to 3 alternatives, avoid tolls or highways, automatic reroute when you leave the route. Mid-drive **Routes** shows your current route next to fresh alternatives, with time saved, tolls and a traffic strip, and switches in one tap |
 | Live traffic | Traffic-aware routes and a traffic layer from TomTom. The key stays on the server |
 | Lane guidance | Lane arrows under the turn instruction, with the lanes to use lit up, wherever OpenStreetMap has lane markings |
 | Toll fares | PLUS Class 1 fare for each route (KLCC → Simpang Pulai: RM 20.34), the amount due at each plaza, and the plazas the route actually drives through |

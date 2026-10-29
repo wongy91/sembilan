@@ -6,7 +6,7 @@ import { Navigator } from './navigator.js';
 import { instruction, maneuverIcon, roadName } from './instructions.js';
 import { poisAlongRoute, reportPois, summarize, trafficPois } from './pois.js';
 import { attachFares, fareGroups, fareKeys, fetchFares, priceRoute } from './fares.js';
-import { bbox, bearing, haversine } from './geo.js';
+import { bbox, bearing, haversine, locate, pointAt } from './geo.js';
 import { REPORT_ICON, REPORT_KINDS, fetchReports, health, postReport, voteReport } from './reports.js';
 import { simulate } from './sim.js';
 import { MANEUVER, UI, laneIcon } from './icons.js';
@@ -145,7 +145,8 @@ let renderedMode = null;
 function render() {
   document.body.dataset.mode = state.mode;
   const body = $('sheet-body');
-  body.innerHTML = { home: homeSheet, place: placeSheet, routes: routesSheet, nav: navSheet, arrived: arrivedSheet }[state.mode]();
+  body.innerHTML = { home: homeSheet, place: placeSheet, routes: routesSheet, nav: () => (state.nav?.alts ? altsSheet() : navSheet()), arrived: arrivedSheet }[state.mode]();
+  document.body.classList.toggle('nav-alts', !!state.nav?.alts);
   $('finder').hidden = !(state.mode === 'home' || state.navSearch);
   document.body.classList.toggle('nav-search', !!state.navSearch);
   if (state.mode !== renderedMode) {
@@ -314,6 +315,111 @@ function routesSheet() {
     </div>`;
 }
 
+const TRAFFIC_COLOR = ['#f5b301', '#f5b301', '#f08c00', '#e03131', '#a61e1e'];
+
+function trafficStrip(route, from) {
+  const span = route.distance - from;
+  if (route.provider !== 'tomtom' || span <= 0) return '';
+  const bars = route.traffic
+    .filter((x) => x.to > from)
+    .map((x) => {
+      const left = (Math.max(0, x.from - from) / span) * 100;
+      const width = Math.max(1.5, ((x.to - Math.max(x.from, from)) / span) * 100);
+      return `<i style="left:${left.toFixed(1)}%;width:${width.toFixed(1)}%;background:${TRAFFIC_COLOR[x.magnitude] || TRAFFIC_COLOR[2]}"></i>`;
+    })
+    .join('');
+  return `<span class="alt-strip">${UI.navArrow}<span>${bars}</span></span>`;
+}
+
+function altCard(alt, i, current) {
+  const diff = current.time - alt.time;
+  const diffTag = alt.current ? '' : Math.abs(diff) < 60 ? '' : `<span class="tag ${diff > 0 ? 'good' : ''}">${esc(diff > 0 ? t('faster', { d: fmtDuration(diff) }) : t('slower', { d: fmtDuration(-diff) }))}</span>`;
+  const price = state.nav.alts.prices?.[i];
+  const toll = price?.priced ? `<span class="tag fare">${esc(t('fare', { amount: price.total.toFixed(2) }))}</span>` : alt.toll ? `<span class="tag toll">${esc(t('tolled'))}</span>` : '';
+  return `<div class="alt-card${alt.current ? ' current' : ''}">
+      <div class="alt-top">
+        <div><b>${esc(fmtDuration(alt.time))}</b><small>${esc(fmtClock(new Date(Date.now() + alt.time * 1000)))} · ${esc(fmtDistance(alt.dist))}</small></div>
+        <button class="btn primary" data-action="${alt.current ? 'alts-close' : 'alts-go'}" data-i="${i}">${UI.navArrow}${esc(t(alt.current ? 'resume' : 'go'))}</button>
+      </div>
+      ${alt.via.length ? `<span class="rc-via">${esc(t('via', { road: alt.via.join(' · ') }))}</span>` : ''}
+      ${diffTag || toll ? `<span class="rc-tags">${diffTag}${toll}</span>` : ''}
+      ${trafficStrip(alt.route, alt.from)}
+    </div>`;
+}
+
+function altsSheet() {
+  const alts = state.nav.alts;
+  const head = `<div class="place-head"><div><h2>${esc(t('routes'))}</h2></div><button class="icon-btn" data-action="alts-close" aria-label="${esc(t('close'))}">${UI.close}</button></div>`;
+  if (!alts.list) return `${head}<div class="route-list">${'<div class="route-card skeleton" aria-hidden="true"><span></span><span></span><span></span></div>'.repeat(3)}</div>`;
+  const current = alts.list[0];
+  const note = alts.list.length === 1 ? `<p class="muted small">${esc(t(alts.failed ? 'noRoute' : 'noAlternatives'))}</p>` : '';
+  return `${head}<div class="route-list">${alts.list.map((a, i) => altCard(a, i, current)).join('')}</div>${note}`;
+}
+
+function followsRoute(candidate, base, from) {
+  return [0.2, 0.5, 0.8].every((f) => {
+    const p = pointAt(candidate.coords, candidate.cum, candidate.distance * f);
+    const hit = locate(base.coords, base.cum, p);
+    return hit.dist < 60 && hit.along >= from - 100;
+  });
+}
+
+async function openAlternatives() {
+  const nav = state.nav;
+  const fix = state.fix;
+  if (!nav || !fix) return toast(t('needLocation'));
+  const progress = nav.navigator.progress();
+  const route = nav.route;
+  const current = {
+    current: true,
+    route,
+    from: progress.along,
+    time: progress.remainingTime,
+    dist: progress.remaining,
+    via: route.via,
+    toll: route.tollSections.some(([, end]) => end > progress.along),
+  };
+  const alts = (nav.alts = { list: null });
+  if (!$('nav-more').hidden) toggleMore();
+  render();
+  try {
+    const routes = await planRoutes([fix.lon, fix.lat], [nav.dest.lon, nav.dest.lat], {
+      avoidTolls: settings.avoidTolls,
+      avoidHighways: settings.avoidHighways,
+      heading: fix.heading,
+      liveTraffic: state.backend.traffic,
+    });
+    if (nav.alts !== alts) return;
+    const others = routes
+      .filter((r) => !followsRoute(r, route, progress.along))
+      .sort((a, b) => a.duration - b.duration)
+      .map((r) => ({ route: r, from: 0, time: r.duration, dist: r.distance, via: r.via, toll: r.hasToll }));
+    alts.list = [current, ...others];
+    nav.lineAt = 0;
+    render();
+    if (state.backend.fares && others.length) {
+      const pois = others.map((o) => poisAlongRoute(o.route, state.poiData));
+      loadPrices(others.map((o) => o.route), pois).then((prices) => {
+        if (nav.alts !== alts) return;
+        alts.prices = [null, ...prices];
+        render();
+      });
+    }
+  } catch {
+    if (nav.alts !== alts) return;
+    alts.list = [current];
+    alts.failed = true;
+    render();
+  }
+}
+
+function closeAlternatives() {
+  if (!state.nav?.alts) return;
+  state.nav.alts = null;
+  state.nav.lineAt = 0;
+  render();
+}
+
 function soundTile() {
   return `${settings.voice ? UI.sound : UI.muted}<span>${esc(t(settings.voice ? 'sound' : 'muted'))}</span>`;
 }
@@ -351,6 +457,7 @@ function navSheet() {
       <button class="round" data-action="more" aria-label="${esc(t('more'))}">${UI.more}</button>
     </div>
     <div id="nav-more" class="nav-more" hidden>
+      <button class="tile" data-action="alts">${UI.routes}<span>${esc(t('routes'))}</span></button>
       <button class="tile" data-action="overview">${UI.route}<span>${esc(t('overview'))}</span></button>
       <button class="tile" data-action="mute">${soundTile()}</button>
       <button class="tile" data-action="share-eta">${UI.share}<span>${esc(t('shareEta'))}</span></button>
@@ -747,7 +854,7 @@ function navTick(fix) {
   map.driveTo(position, fix.heading, fix.speed ?? 0);
   const now = performance.now();
   if (!nav.lineAt || (now - nav.lineAt > 1000 && Math.abs(progress.along - nav.lineAlong) > 20)) {
-    map.showRoutes([nav.route], 0, progress.along);
+    map.showRoutes([nav.route, ...(nav.alts?.list?.slice(1).map((a) => a.route) || [])], 0, progress.along);
     nav.lineAt = now;
     nav.lineAlong = progress.along;
   }
@@ -1188,6 +1295,18 @@ function bindUi() {
       case 'more':
         if (Date.now() - (state.swipedAt || 0) < 400) return;
         return toggleMore();
+      case 'alts':
+        return openAlternatives();
+      case 'alts-close':
+        return closeAlternatives();
+      case 'alts-go': {
+        const alt = state.nav?.alts?.list?.[i];
+        if (!alt) return;
+        state.nav.alts = null;
+        useRoute(state.nav, alt.route);
+        render();
+        return toast(t('routeChanged'));
+      }
       case 'overview':
         state.following = false;
         map.setFollow(false);
