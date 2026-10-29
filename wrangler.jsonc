@@ -1,0 +1,26 @@
+{
+	"name": "sembilan",
+	"main": "worker/index.js",
+	"compatibility_date": "2026-10-28",
+	"assets": {
+		"directory": "./public",
+		"binding": "ASSETS"
+	},
+	"observability": {
+		"enabled": true
+	},
+	// Secrets are set with `npx wrangler secret put <NAME>`, never in this file (see README → Configuration).
+	"triggers": {
+		"crons": [
+			"17 * * * *"
+		]
+	},
+	// Community reports. Forks: run `npx wrangler d1 create sembilan` and put your own database_id here.
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "sembilan",
+			"database_id": "fd2f2730-e3c6-4c28-8313-0b73bc9df6c2"
+		}
+	]
+}
