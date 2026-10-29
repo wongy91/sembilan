@@ -199,6 +199,12 @@ function measureSheet() {
   document.documentElement.style.setProperty('--sheet-h', `${height}px`);
 }
 
+function measureBanner() {
+  const bottom = window.innerWidth < 900 ? $('banner').getBoundingClientRect().bottom : 0;
+  if (bottom > 0) document.documentElement.style.setProperty('--banner-bottom', `${bottom}px`);
+  else document.documentElement.style.removeProperty('--banner-bottom');
+}
+
 const slide = { offset: 0, max: 0, from: null, base: 0, moved: false, lastY: 0, lastT: 0, speed: 0, raf: 0 };
 
 const homeSlides = () => state.mode === 'home' && !document.body.classList.contains('searching') && window.innerWidth < 900;
@@ -840,7 +846,7 @@ function finishNav(arrived) {
   if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
   for (const id of ['banner', 'lanes', 'speedo', 'speed-limit', 'btn-sound', 'btn-report', 'btn-recenter', 'alert', 'road-pill']) $(id).hidden = true;
   map.setCallout(null);
-  document.body.classList.remove('nav-more-open', 'has-lanes');
+  document.body.classList.remove('nav-more-open');
   goHome();
   map.stopDrive();
   map.resetCamera();
@@ -888,7 +894,6 @@ function updateLanes(progress) {
   if (nav.lanesFor === key) return;
   nav.lanesFor = key;
   $('lanes').hidden = key < 0;
-  document.body.classList.toggle('has-lanes', key >= 0);
   if (key >= 0) $('lanes').innerHTML = lanes.map((l) => `<span>${laneIcon(l)}</span>`).join('');
 }
 
@@ -1569,6 +1574,7 @@ function bindUi() {
     if (state.nav) acquireWakeLock();
   });
   new ResizeObserver(() => slide.from == null && !slide.raf && syncSlide()).observe($('sheet'));
+  new ResizeObserver(measureBanner).observe($('banner'));
   window.addEventListener('resize', measureSheet);
   window.addEventListener('offline', () => toast(t('offline')));
   window.addEventListener('beforeinstallprompt', (e) => {

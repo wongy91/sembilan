@@ -34,6 +34,7 @@
   --radius: 22px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --banner-bottom: calc(var(--safe-top) + 92px);
   color-scheme: light;
 }
 
@@ -244,8 +245,8 @@ body.searching .fab-menu {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px 16px;
-  padding: calc(var(--safe-top) + 14px) 18px 16px;
+  gap: 12px 14px;
+  padding: calc(var(--safe-top) + 16px) 18px 18px;
   border-radius: 0 0 26px 26px;
   background: #101419;
   color: #fff;
@@ -255,14 +256,14 @@ body.searching .fab-menu {
 
 #man-icon {
   flex: none;
-  width: 62px;
-  height: 62px;
+  width: 80px;
+  height: 80px;
   color: #fff;
 }
 
 #man-icon svg {
-  width: 62px;
-  height: 62px;
+  width: 80px;
+  height: 80px;
   stroke-width: 5;
 }
 
@@ -272,20 +273,21 @@ body.searching .fab-menu {
 }
 
 #man-dist {
-  font-size: 38px;
+  font-size: 46px;
   font-weight: 900;
   line-height: 1;
   letter-spacing: -0.01em;
 }
 
 #man-text {
-  margin-top: 4px;
-  font-size: 17px;
+  display: -webkit-box;
+  margin-top: 6px;
+  font-size: 24px;
   font-weight: 800;
-  opacity: 0.82;
-  white-space: nowrap;
+  line-height: 1.2;
   overflow: hidden;
-  text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 #man-then {
@@ -294,7 +296,7 @@ body.searching .fab-menu {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -302,24 +304,25 @@ body.searching .fab-menu {
 }
 
 #man-then svg {
-  width: 26px;
-  height: 26px;
+  width: 34px;
+  height: 34px;
 }
 
 #lanes {
   flex-basis: 100%;
   display: flex;
   justify-content: center;
-  padding: 5px 8px;
-  border-radius: 14px;
+  padding: 6px 10px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.08);
 }
 
 #lanes span {
   display: grid;
   place-items: center;
-  width: 42px;
-  height: 36px;
+  flex: 0 1 58px;
+  min-width: 0;
+  height: 52px;
 }
 
 #lanes span + span {
@@ -327,8 +330,10 @@ body.searching .fab-menu {
 }
 
 #lanes svg {
-  width: 30px;
-  height: 30px;
+  width: 44px;
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: 1;
 }
 
 #lanes .off {
@@ -341,18 +346,18 @@ body.searching .fab-menu {
 
 .shield {
   display: inline-block;
-  padding: 0 6px;
-  border-radius: 6px;
+  padding: 0 7px;
+  border-radius: 7px;
   background: #0f8a5f;
   color: #fff;
-  font-size: 15px;
+  font-size: 20px;
   font-weight: 900;
   vertical-align: 2px;
 }
 
 #alert {
   position: fixed;
-  top: calc(var(--safe-top) + 172px + var(--lanes-h, 0px));
+  top: calc(var(--banner-bottom) + 80px);
   left: 50%;
   transform: translateX(-50%);
   max-width: calc(100% - 28px);
@@ -1617,17 +1622,13 @@ body.nav-alts .sheet {
 
 @media (max-width: 899px) {
   body[data-mode='nav'] .maplibregl-ctrl-bottom-left {
-    top: calc(var(--safe-top) + 240px + var(--lanes-h, 0px));
+    top: calc(var(--banner-bottom) + 148px);
     bottom: auto;
-  }
-
-  body.has-lanes {
-    --lanes-h: 56px;
   }
 }
 
 body[data-mode='nav'] .fab-menu {
-  top: calc(var(--safe-top) + 108px + var(--lanes-h, 0px));
+  top: calc(var(--banner-bottom) + 16px);
 }
 
 body.nav-more-open #road-pill,
@@ -1754,6 +1755,11 @@ body.has-results #sheet-body {
     border-radius: var(--radius);
   }
 
+  #alert {
+    left: calc(50% + 217px);
+    max-width: calc(100% - 462px);
+  }
+
   #fabs,
   .fab-report,
   .pill,
@@ -1785,7 +1791,7 @@ body.has-results #sheet-body {
 
 .fab-sound {
   position: fixed;
-  top: calc(var(--safe-top) + 108px + var(--lanes-h, 0px));
+  top: calc(var(--banner-bottom) + 16px);
   right: 14px;
   z-index: 2;
 }
