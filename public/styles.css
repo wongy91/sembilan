@@ -1362,6 +1362,7 @@ body.nav-alts .sheet {
 
 .dialog-body {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   padding: 18px 20px 22px;
 }
@@ -1420,8 +1421,10 @@ body.nav-alts .sheet {
 }
 
 .row select {
+  min-width: 0;
   max-width: 60%;
   min-height: 38px;
+  text-overflow: ellipsis;
   padding: 0 10px;
   border: 0;
   border-radius: 12px;
