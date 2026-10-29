@@ -15,6 +15,7 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ### Security
 
+- The Worker no longer keeps a log line for every request. Those lines held the request address, which for search includes what you typed and your approximate position; Cloudflare kept them for 3 days. Only error reports and Worker crashes are logged now.
 - Security headers on every page and file: a Content-Security-Policy that allows only the services Sembilan uses, plus `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` and `Permissions-Policy`. Anything the policy blocks is reported like other errors.
 
 ### Fixed

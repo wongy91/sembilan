@@ -10,8 +10,12 @@
 		"directory": "./public",
 		"binding": "ASSETS"
 	},
+	// Request URLs carry search text and positions, so only the Worker's own console logs are kept (error reports, crashes).
 	"observability": {
-		"enabled": true
+		"enabled": true,
+		"logs": {
+			"invocation_logs": false
+		}
 	},
 	// Per-visitor limits on the endpoints that call TomTom and PLUS. Forks: each namespace_id must be unique in your Cloudflare account.
 	"ratelimits": [
