@@ -149,7 +149,7 @@ Wrong roads, missing U-turns and missing cameras are OpenStreetMap data. Fix the
 ## Limitations
 
 - **Traffic and coverage.** Traffic comes from TomTom, not from millions of drivers like Waze, and community reports start with zero users. The OpenStreetMap extract (28 Oct 2026) has only 79 speed cameras for Malaysia.
-- **Browser limits.** Guidance stops when the screen is off, and there is no CarPlay or Android Auto. That needs a native app.
+- **Browser limits.** Guidance stops when the screen is off, and there is no CarPlay or Android Auto. That needs a native app. The map needs WebGL; without it, Sembilan offers search and saved places and hands the trip to Waze or Google Maps.
 - **Lanes and speed limits.** Lanes appear only where OpenStreetMap mappers have tagged them, and arrive a few seconds after you start driving, longer when the free Valhalla server is busy. Speed limits need a TomTom key.
 - **Toll fares** use PLUS's own fare service, the one its website calculator calls. It is undocumented and can change or block outside callers at any time; fares then disappear while navigation keeps working. Only PLUS is priced, Class 1 only, without discounts. Bandar Baru Nilai and Port Dickson Utara/Selatan have no clear OpenStreetMap match and show "fare unavailable".
 - **Business search quality** follows Overture's data: some places have outdated names or positions, and a search matches word beginnings, so typos are not forgiven.

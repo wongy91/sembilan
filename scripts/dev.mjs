@@ -50,7 +50,7 @@ createServer(async (req, res) => {
     const chunks = [];
     for await (const chunk of req) chunks.push(chunk);
     const headers = { 'cf-connecting-ip': req.socket.remoteAddress || 'local' };
-    if (req.headers['content-type']) headers['content-type'] = req.headers['content-type'];
+    for (const name of ['content-type', 'user-agent']) if (req.headers[name]) headers[name] = req.headers[name];
     const request = new Request(`http://localhost:${port}${req.url}`, {
       method: req.method,
       headers,

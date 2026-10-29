@@ -1,5 +1,5 @@
-import './errors.js';
-import { MapView } from './map.js';
+import { reportError } from './errors.js';
+import { KL, MapView } from './map.js';
 import { fmtAgo, fmtClock, fmtDistance, fmtDuration, getLang, setLang, t } from './i18n.js';
 import { nearbyPlaces, reversePlace, searchPlaces } from './search.js';
 import { loadLanes, planRoutes } from './routing.js';
@@ -83,26 +83,35 @@ const isNight = () => {
   return h >= 19 || h < 7;
 };
 
-const map = new MapView($('map'), {
-  night: isNight(),
-  threeD: settings.threeD,
-  onLongPress: dropPin,
-  onUserMove: () => {
-    if (!state.nav) return;
-    state.following = false;
-    map.setFollow(false);
-    $('btn-recenter').hidden = false;
-  },
-  onRouteClick: selectRoute,
-  onReportClick: showReportPopup,
-});
+const map = createMap();
 window.sembilan = { map, state };
+
+function createMap() {
+  try {
+    return new MapView($('map'), {
+      night: isNight(),
+      threeD: settings.threeD,
+      onLongPress: dropPin,
+      onUserMove: () => {
+        if (!state.nav) return;
+        state.following = false;
+        map.setFollow(false);
+        $('btn-recenter').hidden = false;
+      },
+      onRouteClick: selectRoute,
+      onReportClick: showReportPopup,
+    });
+  } catch (err) {
+    reportError(err);
+    return null;
+  }
+}
 
 function setTheme() {
   const night = isNight();
   document.documentElement.dataset.theme = night ? 'night' : 'day';
   document.querySelector('meta[name="theme-color"]').content = night ? '#0f1729' : '#eef1f4';
-  map.setNight(night);
+  map?.setNight(night);
 }
 
 function applyTexts() {
@@ -278,8 +287,9 @@ function homeSheet() {
     .map((s, i) => `<button class="list-item" data-action="fav" data-i="${i}"><span class="li-icon">⭐</span><span><b>${esc(s.label)}</b><small>${esc(s.label !== s.name ? s.name : s.sub)}</small></span></button>`)
     .join('');
   const more = shown.length < settings.saved.length ? `<button class="list-more" data-action="fav-all">${esc(t('showAll', { n: settings.saved.length }))}</button>` : '';
-  return `${install}<div class="shortcuts">${shortcut('home')}${shortcut('work')}</div>${saved ? `<h3 class="label">${esc(t('savedPlaces'))}</h3>${saved}${more}` : ''}${
-    recents ? `<h3 class="label">${esc(t('recent'))}</h3>${recents}` : saved ? '' : `<p class="muted hint small">${esc(t('hint'))}</p>`
+  const noMap = map ? '' : `<div class="notice"><b>${esc(t('noMapTitle'))}</b><span>${esc(t('noMapText'))}</span></div>`;
+  return `${noMap}${install}<div class="shortcuts">${shortcut('home')}${shortcut('work')}</div>${saved ? `<h3 class="label">${esc(t('savedPlaces'))}</h3>${saved}${more}` : ''}${
+    recents ? `<h3 class="label">${esc(t('recent'))}</h3>${recents}` : saved || !map ? '' : `<p class="muted hint small">${esc(t('hint'))}</p>`
   }`;
 }
 
@@ -289,13 +299,19 @@ function placeSheet() {
       <div><h2>${esc(p.name)}</h2><p class="muted">${esc(p.sub)}</p></div>
       <button class="icon-btn" data-action="close" aria-label="${esc(t('close'))}">${UI.close}</button>
     </div>
-    <button class="btn primary big block" data-action="directions">${esc(t('directions'))}${state.placeEta ? ` · ${esc(fmtDuration(state.placeEta))}` : ''}</button>
+    ${map ? `<button class="btn primary big block" data-action="directions">${esc(t('directions'))}${state.placeEta ? ` · ${esc(fmtDuration(state.placeEta))}` : ''}</button>` : handoff(p)}
     <div class="quick-actions">
       <button class="quick" data-action="set-home"><span>🏠</span>${esc(t('setHome'))}</button>
       <button class="quick" data-action="set-work"><span>💼</span>${esc(t('setWork'))}</button>
       ${store.findSaved(settings, p) ? `<button class="quick on" data-action="save-place"><span>★</span>${esc(t('saved'))}</button>` : `<button class="quick" data-action="save-place"><span>☆</span>${esc(t('save'))}</button>`}
       <button class="quick" data-action="share-place"><span>${UI.share}</span>${esc(t('share'))}</button>
     </div>`;
+}
+
+function handoff(p) {
+  const at = `${p.lat.toFixed(6)},${p.lon.toFixed(6)}`;
+  const link = (app, href, cls) => `<a class="btn big ${cls}" href="${href}" target="_blank" rel="noopener">${app}</a>`;
+  return `<p class="muted small handoff-label">${esc(t('navigateWith'))}</p><div class="handoff">${link('Waze', `https://waze.com/ul?ll=${at}&amp;navigate=yes`, 'primary')}${link('Google Maps', `https://www.google.com/maps/dir/?api=1&amp;destination=${at}`, '')}</div>`;
 }
 
 function tollTags(r, i) {
@@ -572,7 +588,7 @@ async function runSearch(query) {
   const ctrl = (state.searchAbort = new AbortController());
   showResults([...local, { msg: t('searching') }]);
   try {
-    const near = state.fix ? [state.fix.lon, state.fix.lat] : map.center();
+    const near = state.fix ? [state.fix.lon, state.fix.lat] : (map?.center() ?? KL);
     const list = await searchPlaces(query, { near, lang: getLang(), signal: ctrl.signal, tomtom: state.backend.search, places: state.backend.places });
     if (ctrl.signal.aborted) return;
     searchCache.set(cacheKey(query), list);
@@ -595,7 +611,7 @@ async function runNearby(cat) {
   syncSlide();
   showResults([{ msg: t('searching') }]);
   try {
-    const near = state.fix ? [state.fix.lon, state.fix.lat] : map.center();
+    const near = state.fix ? [state.fix.lon, state.fix.lat] : (map?.center() ?? KL);
     const list = await nearbyPlaces(cat, { near, signal: ctrl.signal, tomtom: state.backend.search, label });
     if (ctrl.signal.aborted) return;
     showResults(list.length ? list : [{ msg: t('noResults') }]);
@@ -631,11 +647,12 @@ function selectPlace(place) {
   state.placeEta = null;
   state.mode = 'place';
   state.routes = [];
-  map.clearRoutes();
   $('q').value = '';
   endSearch();
-  map.showPin([place.lon, place.lat]);
   render();
+  if (!map) return;
+  map.clearRoutes();
+  map.showPin([place.lon, place.lat]);
   map.flyTo([place.lon, place.lat], 15);
   prefetchRoutes(place);
 }
@@ -657,8 +674,8 @@ function goHome() {
   state.routes = [];
   $('q').value = '';
   endSearch();
-  map.clearRoutes();
-  map.showPin(null);
+  map?.clearRoutes();
+  map?.showPin(null);
   render();
 }
 
@@ -1205,11 +1222,11 @@ function changeSetting(key, value) {
   if (key === 'voice') voice.configure({ enabled: value });
   if (key === 'voiceURI') voice.configure({ voiceURI: value });
   if (key === 'night') setTheme();
-  if (key === 'threeD') {
+  if (key === 'threeD' && map) {
     map.set3D(value);
     if (!state.nav) map.map.easeTo({ pitch: value ? 55 : 0, duration: 500 });
   }
-  if (key === 'traffic') map.setTraffic(value && state.backend.traffic);
+  if (key === 'traffic') map?.setTraffic(value && state.backend.traffic);
   if ((key === 'avoidTolls' || key === 'avoidHighways') && state.mode === 'routes') plan();
 }
 
@@ -1242,7 +1259,7 @@ function bindUi() {
     timer = setTimeout(() => runSearch(query), 200);
   });
   $('q').addEventListener('keydown', (e) => e.key === 'Escape' && endSearch());
-  map.map.on('click', () => document.body.classList.contains('searching') && endSearch());
+  map?.map.on('click', () => document.body.classList.contains('searching') && endSearch());
   $('searchbox').addEventListener('submit', (e) => {
     e.preventDefault();
     const query = $('q').value.trim();
@@ -1447,7 +1464,7 @@ function bindUi() {
   });
 
   let moveTimer = null;
-  map.map.on('moveend', () => {
+  map?.map.on('moveend', () => {
     if (state.nav || !state.backend.reports || map.map.getZoom() < 9) return;
     clearTimeout(moveTimer);
     moveTimer = setTimeout(refreshReports, 600);
@@ -1491,11 +1508,12 @@ function openFromUrl() {
   selectPlace({ name: params.get('n') || `${lat}, ${lon}`, sub: '', lon, lat });
 }
 
+document.body.classList.toggle('no-map', !map);
 applyTexts();
 setTheme();
 bindUi();
 render();
-startGps();
+if (map) startGps();
 openFromUrl();
 fetch('data/pois.json')
   .then((r) => r.json())
@@ -1503,7 +1521,8 @@ fetch('data/pois.json')
   .catch(() => {});
 health().then((backend) => {
   state.backend = backend;
-  $('row-traffic').hidden = !backend.traffic;
+  $('row-traffic').hidden = !backend.traffic || !map;
+  if (!map) return;
   if (backend.traffic && settings.traffic) map.setTraffic(true);
   map.ready.then(refreshReports);
 });

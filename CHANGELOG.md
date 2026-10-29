@@ -8,6 +8,10 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 - Errors that happen in the app are reported to the Worker's logs, so problems show up without a screenshot. Coordinates, IP addresses and web-address details are removed first, and at most five reports are sent per visit.
 
+### Fixed
+
+- A browser that can't draw the map (WebGL turned off or unsupported, or the map library failed to download) showed a blank app with no text. Sembilan now explains why and still lets you search, use Home, Work and saved places, and open a place in Waze or Google Maps.
+
 ## [0.10.0] - 2026-10-29
 
 ### Added
