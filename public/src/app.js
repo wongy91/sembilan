@@ -10,6 +10,7 @@ import { bbox, bearing, haversine } from './geo.js';
 import { REPORT_ICON, REPORT_KINDS, fetchReports, health, postReport, voteReport } from './reports.js';
 import { simulate } from './sim.js';
 import { MANEUVER, UI, laneIcon } from './icons.js';
+import { BUILD, RELEASE } from './version.js';
 import * as store from './store.js';
 import * as voice from './voice.js';
 
@@ -875,7 +876,7 @@ function fillSettings() {
   $('set-voice-name').value = voices.some((v) => v.voiceURI === settings.voiceURI) ? settings.voiceURI : '';
   $('install-steps').hidden = !installSteps || installed();
   if (installSteps) $('install-steps').innerHTML = `<b>${esc(t('installTitle'))}</b><br>${installStepsText()}`;
-  $('app-version').textContent = state.version ? t('version', { v: state.version.release, build: state.version.build }) : '';
+  $('app-version').textContent = t('version', { v: RELEASE, build: BUILD });
 }
 
 async function promptInstall() {
@@ -1131,13 +1132,7 @@ health().then((backend) => {
   map.ready.then(refreshReports);
 });
 if ('serviceWorker' in navigator) {
-  const sw = navigator.serviceWorker;
-  const updating = !!sw.controller;
-  sw.addEventListener('controllerchange', () => (state.updateReady = updating));
-  sw.addEventListener('message', (e) => {
-    if (e.data?.release) state.version ??= e.data;
-  });
-  sw.register('sw.js').catch(() => {});
-  if (sw.controller) sw.controller.postMessage('version');
-  else sw.ready.then((reg) => reg.active?.postMessage('version'));
+  const updating = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => (state.updateReady = updating));
+  navigator.serviceWorker.register('sw.js').catch(() => {});
 }

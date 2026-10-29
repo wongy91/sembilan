@@ -4,7 +4,7 @@ import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import worker from '../worker/index.js';
 import { createLocalD1 } from './d1-local.mjs';
-import { stampedServiceWorker } from './stamp-sw.mjs';
+import { stampedServiceWorker, stampedVersionModule } from './stamp-sw.mjs';
 
 const root = fileURLToPath(new URL('../public/', import.meta.url));
 const port = Number(process.env.PORT || 8787);
@@ -24,8 +24,9 @@ async function serveStatic(request) {
   if (path.endsWith('/')) path += 'index.html';
   const file = join(root, path);
   if (!file.startsWith(root)) return new Response('Forbidden', { status: 403 });
-  if (path === '/sw.js') {
-    return new Response(await stampedServiceWorker(), { headers: { 'content-type': TYPES['.js'], 'cache-control': 'no-cache' } });
+  if (path === '/sw.js' || path === '/src/version.js') {
+    const body = path === '/sw.js' ? await stampedServiceWorker() : await stampedVersionModule();
+    return new Response(body, { headers: { 'content-type': TYPES['.js'], 'cache-control': 'no-cache' } });
   }
   try {
     if (!(await stat(file)).isFile()) throw new Error('not a file');

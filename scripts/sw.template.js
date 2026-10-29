@@ -1,4 +1,3 @@
-const RELEASE = '0.0.0';
 const VERSION = 'sembilan-dev';
 const TILES = 'sembilan-tiles';
 const SHELL = [
@@ -56,10 +55,6 @@ async function staleWhileRevalidate(request) {
     .catch(() => null);
   return hit || (await update) || Response.error();
 }
-
-self.addEventListener('message', (event) => {
-  if (event.data === 'version') event.source?.postMessage({ release: RELEASE, build: VERSION.replace('sembilan-', '').slice(0, 7) });
-});
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;

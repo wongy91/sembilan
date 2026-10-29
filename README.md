@@ -93,7 +93,7 @@ openssl rand -hex 32 | npx wrangler secret put REPORT_SALT
 npx wrangler deploy
 ```
 
-`npx wrangler deploy` first runs `scripts/stamp-sw.mjs`, which generates `public/sw.js` with a fingerprint of the app files so phones pick up each release.
+`npx wrangler deploy` first runs `scripts/stamp-sw.mjs`, which generates `public/sw.js` and `public/src/version.js` from the version in `package.json` and a fingerprint of the app files, so phones pick up each release and Settings shows which one is running.
 
 For live traffic, create a free key at [developer.tomtom.com](https://developer.tomtom.com/) and run `npx wrangler secret put TOMTOM_API_KEY`; it prompts for the key.
 

@@ -18,4 +18,4 @@ jobs:
           node-version: 22
       - run: npm test
       - name: Service worker builds
-        run: node scripts/stamp-sw.mjs && node --check public/sw.js
+        run: node scripts/stamp-sw.mjs && node --check public/sw.js && node --check public/src/version.js
