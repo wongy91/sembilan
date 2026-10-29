@@ -4,6 +4,22 @@ import { ALERT_LEAD, alertText } from './pois.js';
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
+function timeAfter(route, index, along) {
+  const steps = route.steps;
+  const cur = steps[index];
+  const curEnd = index + 1 < steps.length ? steps[index + 1].along : route.distance;
+  const frac = clamp((along - cur.along) / Math.max(1, curEnd - cur.along), 0, 1);
+  const last = steps.length - 1;
+  const total = route.elapsed[last] + steps[last].duration;
+  return Math.max(0, (total - route.elapsed[index] - cur.duration * frac) * route.timeScale);
+}
+
+export function timeLeft(route, along) {
+  let index = 0;
+  while (index + 1 < route.steps.length && route.steps[index + 1].along <= along) index++;
+  return timeAfter(route, index, along);
+}
+
 export class Navigator {
   constructor(route, { lang = 'ms', pois = [], resumed = false } = {}) {
     this.route = route;
@@ -158,16 +174,10 @@ export class Navigator {
     const next = steps[k];
     const after = this.nextVoiced(k + 1);
     const following = after > k && steps[after].along - next.along < 300 ? steps[after] : null;
-    const cur = steps[this.stepIndex];
-    const curEnd = this.stepIndex + 1 < steps.length ? steps[this.stepIndex + 1].along : r.distance;
-    const frac = clamp((along - cur.along) / Math.max(1, curEnd - cur.along), 0, 1);
-    const elapsed = r.elapsed[this.stepIndex] + cur.duration * frac;
-    const last = steps.length - 1;
-    const stepTotal = r.elapsed[last] + steps[last].duration;
     return {
       along,
       remaining: Math.max(0, r.distance - along),
-      remainingTime: Math.max(0, (stepTotal - elapsed) * r.timeScale),
+      remainingTime: timeAfter(r, this.stepIndex, along),
       stepIndex: this.stepIndex,
       next,
       nextIndex: k,

@@ -4,6 +4,10 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+### Changed
+
+- The arrival time and time left while driving now follow live traffic. Every 5 minutes TomTom re-times the rest of your route, so a jam that builds up after you set off shows in the ETA (for example 28 → 43 min), as do Share ETA and the current route in **Routes**.
+
 ## [0.12.0] - 2026-10-29
 
 ### Added

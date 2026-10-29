@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { cumulative, haversine, pointAt, thin } from '../public/src/geo.js';
 import { fasterRoute, pickFaster } from '../public/src/routing.js';
+import { fromTomTom } from '../public/src/providers.js';
+import { Navigator, timeLeft } from '../public/src/navigator.js';
 
 const line = (n, step = 0.0001) => Array.from({ length: n }, (_, i) => [101.7 + i * step, 3.15]);
 
@@ -23,6 +25,18 @@ test('thin keeps both ends and leaves at least the spacing between kept points',
   assert.deepEqual(out.at(-1), coords.at(-1));
   assert.ok(out.length < 130 && out.length > 90, `${out.length} points for 11 km at 100 m`);
   assert.ok(out.slice(1, -1).every((p, i) => haversine(out[i], p) >= 100));
+});
+
+test('time left on a route matches the navigator and runs down to zero at the end', () => {
+  const [route] = fromTomTom(tomtomJson(1800));
+  assert.equal(timeLeft(route, 0), 1800);
+  assert.equal(timeLeft(route, route.distance), 0);
+  const half = timeLeft(route, route.distance / 2);
+  assert.ok(Math.abs(half - 900) < 1, `${half} s at half way`);
+  const nav = new Navigator(route);
+  const [lon, lat] = pointAt(route.coords, route.cum, 1500);
+  nav.update({ lon, lat, accuracy: 5, speed: 12, heading: 90, time: 0 });
+  assert.ok(Math.abs(nav.progress().remainingTime - timeLeft(route, nav.progress().along)) < 0.001);
 });
 
 test('a faster route must save at least 3 minutes and 5% of the trip', () => {

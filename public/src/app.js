@@ -3,7 +3,7 @@ import { KL, MapView } from './map.js';
 import { fmtAgo, fmtClock, fmtDistance, fmtDuration, getLang, setLang, t } from './i18n.js';
 import { nearbyPlaces, reversePlace, searchPlaces } from './search.js';
 import { fasterRoute, loadLanes, pickFaster, planRoutes } from './routing.js';
-import { Navigator } from './navigator.js';
+import { Navigator, timeLeft } from './navigator.js';
 import { instruction, maneuverIcon, roadName } from './instructions.js';
 import { poisAlongRoute, reportPois, summarize, trafficPois } from './pois.js';
 import { attachFares, fareGroups, fareKeys, fetchFares, priceRoute } from './fares.js';
@@ -83,13 +83,13 @@ const isNight = () => {
   return h >= 19 || h < 7;
 };
 
-const FASTER_EVERY = 5 * 60000;
+const TRAFFIC_EVERY = 5 * 60000;
 const OFFER_MS = 20000;
 const QUIET_AFTER_CHANGE = 2 * 60000;
 const QUIET_AFTER_DECLINE = 10 * 60000;
 
 const map = createMap();
-window.sembilan = { map, state, checkFaster: () => state.nav && checkFaster(state.nav) };
+window.sembilan = { map, state, checkTraffic: () => state.nav && checkTraffic(state.nav) };
 
 function createMap() {
   try {
@@ -437,7 +437,7 @@ async function openAlternatives() {
     current: true,
     route,
     from: progress.along,
-    time: progress.remainingTime,
+    time: remainingTime(nav, progress),
     dist: progress.remaining,
     via: route.via,
     toll: route.tollSections.some(([, end]) => end > progress.along),
@@ -792,7 +792,8 @@ function startNav(simulated) {
     lastReroute: 0,
     rerouting: false,
     reportTimer: null,
-    fasterTimer: null,
+    trafficTimer: null,
+    fresh: null,
     offer: null,
     routeChangedAt: Date.now(),
     declinedAt: 0,
@@ -821,7 +822,7 @@ function startNav(simulated) {
   }
   if (state.backend.traffic) {
     const nav = state.nav;
-    nav.fasterTimer = setInterval(() => checkFaster(nav), FASTER_EVERY);
+    nav.trafficTimer = setInterval(() => checkTraffic(nav), TRAFFIC_EVERY);
   }
 }
 
@@ -830,7 +831,7 @@ function finishNav(arrived) {
   if (!nav) return;
   nav.stopSim?.();
   clearInterval(nav.reportTimer);
-  clearInterval(nav.fasterTimer);
+  clearInterval(nav.trafficTimer);
   clearOffer(nav);
   releaseWakeLock();
   if (!arrived) voice.stop();
@@ -894,8 +895,9 @@ function updateLanes(progress) {
 function updateNavSheet(progress, fix) {
   const eta = $('nav-eta');
   if (!eta) return;
-  eta.textContent = fmtClock(new Date(Date.now() + progress.remainingTime * 1000));
-  $('nav-left').textContent = `${fmtDuration(progress.remainingTime)} · ${fmtDistance(progress.remaining)}`;
+  const left = remainingTime(state.nav, progress);
+  eta.textContent = fmtClock(new Date(Date.now() + left * 1000));
+  $('nav-left').textContent = `${fmtDuration(left)} · ${fmtDistance(progress.remaining)}`;
   const ahead = state.nav.pois.filter((p) => p.along > progress.along);
   const rr = ahead.find((p) => p.kind === 'rr');
   const toll = ahead.find((p) => p.kind === 'toll');
@@ -976,6 +978,7 @@ function navTick(fix) {
 
 function useRoute(nav, route) {
   clearOffer(nav);
+  nav.fresh = null;
   nav.routeChangedAt = Date.now();
   nav.route = route;
   nav.calloutFor = undefined;
@@ -994,20 +997,30 @@ function useRoute(nav, route) {
   }
 }
 
-async function checkFaster(nav) {
-  const now = Date.now();
-  if (state.nav !== nav || nav.offer || nav.alts || nav.rerouting || nav.checkingFaster) return;
-  if (now - nav.routeChangedAt < QUIET_AFTER_CHANGE || now - nav.declinedAt < QUIET_AFTER_DECLINE) return;
+function remainingTime(nav, progress) {
+  const fresh = nav.fresh;
+  if (!fresh) return progress.remainingTime;
+  const share = (progress.along - fresh.from) / Math.max(1, nav.route.distance - fresh.from);
+  return timeLeft(fresh.route, Math.max(0, Math.min(1, share)) * fresh.route.distance);
+}
+
+async function checkTraffic(nav) {
+  if (state.nav !== nav || nav.offer || nav.rerouting || nav.checking) return;
   const progress = nav.navigator.progress();
-  if (progress.remainingTime < 600) return;
+  if (remainingTime(nav, progress) < 300) return;
   const route = nav.route;
-  nav.checkingFaster = true;
+  nav.checking = true;
   try {
-    const found = pickFaster(await fasterRoute(route, progress.along, { avoidTolls: settings.avoidTolls, avoidHighways: settings.avoidHighways }));
-    if (found && state.nav === nav && nav.route === route && !nav.alts) offerFaster(nav, found);
+    const result = await fasterRoute(route, progress.along, { avoidTolls: settings.avoidTolls, avoidHighways: settings.avoidHighways });
+    if (state.nav !== nav || nav.route !== route || !result.current) return;
+    nav.fresh = { route: result.current, from: progress.along };
+    const now = Date.now();
+    const quiet = nav.alts || now - nav.routeChangedAt < QUIET_AFTER_CHANGE || now - nav.declinedAt < QUIET_AFTER_DECLINE || result.current.duration < 600;
+    const found = quiet ? null : pickFaster(result);
+    if (found) offerFaster(nav, found);
   } catch {
   } finally {
-    nav.checkingFaster = false;
+    nav.checking = false;
   }
 }
 
@@ -1534,7 +1547,7 @@ function bindUi() {
         return map.fit(state.nav.route.coords, sheetPadding());
       case 'share-eta': {
         const progress = state.nav.navigator.progress();
-        const eta = fmtClock(new Date(Date.now() + progress.remainingTime * 1000));
+        const eta = fmtClock(new Date(Date.now() + remainingTime(state.nav, progress) * 1000));
         return share(t('shareText', { name: state.nav.dest.name, eta }), placeUrl(state.nav.dest));
       }
     }
