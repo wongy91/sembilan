@@ -134,7 +134,7 @@ Wrong roads, missing U-turns and missing cameras are OpenStreetMap data. Fix the
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). To report a security problem, follow [SECURITY.md](SECURITY.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md). To report a security problem, follow [SECURITY.md](SECURITY.md). What changed in each release is in [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 

@@ -32,6 +32,23 @@ To test on a phone you need HTTPS (browsers only give GPS to `https://` or `loca
 
 Wrong roads, missing U-turns, speed cameras and toll plazas come from OpenStreetMap. Fixing them at [openstreetmap.org](https://www.openstreetmap.org) helps every app that uses it; run `npm run data` to pull fresh toll and camera data into Sembilan.
 
+## Releasing
+
+Sembilan uses [Semantic Versioning](https://semver.org). The version in `package.json` is the one the app shows in Settings, next to the build fingerprint. Before 1.0, bump the minor version for new features and the patch version for fixes.
+
+1. In `CHANGELOG.md`, move the entries under **Unreleased** into a new `## [x.y.z] - YYYY-MM-DD` section and update the compare links at the bottom.
+2. Set `"version"` in `package.json` to `x.y.z`.
+3. Commit, tag and push. Tags are bare version numbers, with no `v` prefix:
+
+   ```bash
+   git commit -am "Release x.y.z"
+   git tag -a x.y.z -m "x.y.z"
+   git push --follow-tags
+   ```
+
+4. Deploy with `npx wrangler deploy`.
+5. Publish the GitHub release, using the changelog section as the notes: `gh release create x.y.z --title x.y.z --notes-file <notes>`.
+
 ## License
 
 By contributing you agree that your contribution is licensed under the [GNU AGPL-3.0-or-later](LICENSE), the same as the rest of the project.
