@@ -4,6 +4,8 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-10-29
+
 ### Added
 
 - **Faster route available**, like Waze. With live traffic, the app checks every 5 minutes whether a faster way has opened up. When one saves at least 3 minutes (and 5% of the time left), a card shows "10 min faster · via Jalan Syed Putra" and the voice says so. Tap **Switch** to take it or **Keep** to stay; the card closes by itself after 20 seconds and keeps your route. Both times come from TomTom at the same moment, so the saving compares like with like.
@@ -166,7 +168,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.11.0...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.12.0...HEAD
+[0.12.0]: https://github.com/wongy91/sembilan/compare/0.11.0...0.12.0
 [0.11.0]: https://github.com/wongy91/sembilan/compare/0.10.0...0.11.0
 [0.10.0]: https://github.com/wongy91/sembilan/compare/0.9.1...0.10.0
 [0.9.1]: https://github.com/wongy91/sembilan/compare/0.9.0...0.9.1
