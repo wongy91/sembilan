@@ -4,6 +4,13 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-10-29
+
+### Fixed
+
+- New versions are detected when you switch back to the app and every 30 minutes, not only when it is opened from scratch, so the Restart prompt shows up sooner on iPhone.
+- The Restart prompt now also appears when an update arrives during your very first visit.
+
 ## [0.8.0] - 2026-10-29
 
 ### Changed
@@ -107,7 +114,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.8.0...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.8.1...HEAD
+[0.8.1]: https://github.com/wongy91/sembilan/compare/0.8.0...0.8.1
 [0.8.0]: https://github.com/wongy91/sembilan/compare/0.7.0...0.8.0
 [0.7.0]: https://github.com/wongy91/sembilan/compare/0.6.0...0.7.0
 [0.6.0]: https://github.com/wongy91/sembilan/compare/0.5.0...0.6.0
