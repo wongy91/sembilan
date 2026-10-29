@@ -23,3 +23,4 @@ export function reportError(error) {
 
 addEventListener('error', (e) => reportError(e.error || e.message));
 addEventListener('unhandledrejection', (e) => reportError(e.reason));
+addEventListener('securitypolicyviolation', (e) => reportError(`Content-Security-Policy blocked ${e.effectiveDirective}: ${e.blockedURI}`));

@@ -12,6 +12,10 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 - The Worker limits how often one visitor can call the endpoints that use TomTom and PLUS (120 a minute for search, routing, fares and error reports; 600 traffic tiles a minute), so a single script can't use up the shared TomTom allowance.
 
+### Security
+
+- Security headers on every page and file: a Content-Security-Policy that allows only the services Sembilan uses, plus `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` and `Permissions-Policy`. Anything the policy blocks is reported like other errors.
+
 ### Fixed
 
 - A browser that can't draw the map (WebGL turned off or unsupported, or the map library failed to download) showed a blank app with no text. Sembilan now explains why and still lets you search, use Home, Work and saved places, and open a place in Waze or Google Maps.

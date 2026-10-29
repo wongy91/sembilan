@@ -4,6 +4,7 @@ import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import worker from '../worker/index.js';
 import { createLocalD1 } from './d1-local.mjs';
+import { headersFor, parseHeaders } from './headers.mjs';
 import { stampedServiceWorker, stampedVersionModule } from './stamp-sw.mjs';
 
 const root = fileURLToPath(new URL('../public/', import.meta.url));
@@ -20,18 +21,21 @@ const TYPES = {
 };
 
 async function serveStatic(request) {
-  let path = normalize(decodeURIComponent(new URL(request.url).pathname));
+  const pathname = decodeURIComponent(new URL(request.url).pathname);
+  let path = normalize(pathname);
   if (path.endsWith('/')) path += 'index.html';
   const file = join(root, path);
   if (!file.startsWith(root)) return new Response('Forbidden', { status: 403 });
+  if (path === '/_headers') return new Response('Not found', { status: 404 });
+  const extra = headersFor(parseHeaders(await readFile(join(root, '_headers'), 'utf8').catch(() => '')), pathname);
   if (path === '/sw.js' || path === '/src/version.js') {
     const body = path === '/sw.js' ? await stampedServiceWorker() : await stampedVersionModule();
-    return new Response(body, { headers: { 'content-type': TYPES['.js'], 'cache-control': 'no-cache' } });
+    return new Response(body, { headers: { 'content-type': TYPES['.js'], 'cache-control': 'no-cache', ...extra } });
   }
   try {
     if (!(await stat(file)).isFile()) throw new Error('not a file');
     return new Response(await readFile(file), {
-      headers: { 'content-type': TYPES[extname(file)] || 'application/octet-stream', 'cache-control': 'no-cache' },
+      headers: { 'content-type': TYPES[extname(file)] || 'application/octet-stream', 'cache-control': 'no-cache', ...extra },
     });
   } catch {
     return new Response('Not found', { status: 404 });
