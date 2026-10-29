@@ -5,8 +5,6 @@
 
 Free, open-source turn-by-turn navigation for Malaysia that runs in the browser. Voice guidance in English and Bahasa Melayu, PLUS toll fares, speed-camera and R&R alerts, live traffic, lane guidance and community reports. No app store and no sign-up.
 
-**Try it:** <https://sembilan.nav9.workers.dev>. On a phone, add it to your home screen to run it full screen.
-
 ## Features
 
 | Area | What you get |
