@@ -4,6 +4,12 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-10-29
+
+### Changed
+
+- A bigger turn banner while driving, like Waze. The arrow, distance and road name are larger, and the road name is bright white on up to two lines instead of being cut off after one (17 → 24 px). Lane arrows are about 1.5 times the size (30 → 44 px), and on wide roads the lanes shrink to fit the screen. The menu and sound buttons and the alerts move down to stay clear of the taller banner.
+
 ## [0.14.0] - 2026-10-29
 
 ### Added
@@ -188,7 +194,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.14.0...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.14.1...HEAD
+[0.14.1]: https://github.com/wongy91/sembilan/compare/0.14.0...0.14.1
 [0.14.0]: https://github.com/wongy91/sembilan/compare/0.13.0...0.14.0
 [0.13.0]: https://github.com/wongy91/sembilan/compare/0.12.0...0.13.0
 [0.12.0]: https://github.com/wongy91/sembilan/compare/0.11.0...0.12.0
