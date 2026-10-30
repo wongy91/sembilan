@@ -1689,6 +1689,7 @@ function bindUi() {
       case 'nav-search':
         state.navSearch = true;
         render();
+        document.body.classList.add('searching');
         return $('q').focus();
       case 'more':
         if (Date.now() - (state.swipedAt || 0) < 400) return;
