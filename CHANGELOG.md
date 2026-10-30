@@ -4,6 +4,20 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-10-30
+
+### Added
+
+- **Highway exit signs**: for an exit or a fork with signposts, the turn banner shows a short instruction ("Keep right") with a green sign under it, like the one on the road: the exit number, the road number and up to three destinations ("Exit 3305B · E33 · Ipoh · Klang · Petaling Jaya"). Before, the banner read "E33 Keep right toward Ipoh / Klang", with no exit number.
+- **Speeding ding**: a single ding when you go more than 5 km/h over the speed limit, at the same point where the speedometer turns red. It sounds once until you slow down to the limit, and at most once a minute. Muting the sound mutes it too.
+- **Parking near your destination**: 1 km before you arrive, a card lists up to three car parks within 800 m of your destination. Tap **Go** to drive to one; the card closes by itself after 30 seconds. It isn't shown when you're already heading to a car park or the trip is shorter than 2 km.
+- **Drive times on Home and Work**: the home panel shows how long it takes to drive there from where you are, with live traffic when it's available ("Home · 20 min"). It refreshes at most every 10 minutes, and tapping Home or Work reuses it, so routes appear without a second wait.
+- **Map saved along your route**: when you start a trip, the map along the route is saved on your phone (up to 15 MB of map tiles), so tunnels and stretches without signal no longer show a blank map. Skipped when the phone's data saver is on.
+
+### Changed
+
+- The **Privacy** screen explains the new drive-time and parking lookups and the saved map.
+
 ## [0.14.1] - 2026-10-29
 
 ### Changed
@@ -194,7 +208,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.14.1...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.15.0...HEAD
+[0.15.0]: https://github.com/wongy91/sembilan/compare/0.14.1...0.15.0
 [0.14.1]: https://github.com/wongy91/sembilan/compare/0.14.0...0.14.1
 [0.14.0]: https://github.com/wongy91/sembilan/compare/0.13.0...0.14.0
 [0.13.0]: https://github.com/wongy91/sembilan/compare/0.12.0...0.13.0
