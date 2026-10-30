@@ -4,7 +4,7 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
-## [0.22.1] - 2026-10-31
+## [0.22.1] - 2026-10-30
 
 ### Fixed
 
