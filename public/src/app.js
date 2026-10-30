@@ -114,6 +114,7 @@ function createMap() {
         $('btn-recenter').hidden = false;
       },
       onRouteClick: selectRoute,
+      onFuelClick: (place) => (state.mode === 'home' || state.mode === 'place') && selectPlace({ ...place, name: place.name || t('catFuel'), sub: t('catFuel') }),
       onReportClick: showReportPopup,
     });
   } catch (err) {

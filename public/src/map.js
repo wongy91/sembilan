@@ -8,6 +8,17 @@ const STYLES = {
 };
 export const KL = [101.6869, 3.139];
 export const SIGNAL_ZOOM = 15.5;
+const FUEL_NAME = ['downcase', ['coalesce', ['get', 'name'], '']];
+const FUEL_BRAND = [
+  'case',
+  ['in', 'petronas', FUEL_NAME], 'Petronas',
+  ['in', 'petron', FUEL_NAME], 'Petron',
+  ['in', 'shell', FUEL_NAME], 'Shell',
+  ['any', ['in', 'bhp', FUEL_NAME], ['in', 'bh petrol', FUEL_NAME]], 'BHPetrol',
+  ['in', 'caltex', FUEL_NAME], 'Caltex',
+  '',
+];
+const FUEL_LABEL = ['step', ['zoom'], FUEL_BRAND, 16, ['case', ['!=', FUEL_BRAND, ''], FUEL_BRAND, ['coalesce', ['get', 'name'], '']]];
 const EMPTY = { type: 'FeatureCollection', features: [] };
 const LINE = { 'line-cap': 'round', 'line-join': 'round' };
 const ROUTE_WIDTH = [[8, 3], [12, 4.5], [15, 7], [18, 12], [20, 18]];
@@ -121,6 +132,39 @@ function signalIcon() {
   return g.getImageData(0, 0, 20, 44);
 }
 
+function fuelIcon() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 44;
+  canvas.height = 44;
+  const g = canvas.getContext('2d');
+  g.fillStyle = '#344054';
+  g.strokeStyle = '#fff';
+  g.lineWidth = 3;
+  g.beginPath();
+  g.arc(22, 22, 19.5, 0, Math.PI * 2);
+  g.fill();
+  g.stroke();
+  g.fillStyle = '#fff';
+  g.beginPath();
+  g.roundRect(13, 11, 12, 21, 2);
+  g.fill();
+  g.fillRect(11, 30, 16, 3);
+  g.fillStyle = '#344054';
+  g.fillRect(15, 14, 8, 6);
+  g.strokeStyle = '#fff';
+  g.lineWidth = 2;
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  g.beginPath();
+  g.moveTo(25, 14);
+  g.lineTo(30, 18);
+  g.lineTo(30, 27);
+  g.quadraticCurveTo(30, 29, 28, 29);
+  g.lineTo(25, 29);
+  g.stroke();
+  return g.getImageData(0, 0, 44, 44);
+}
+
 function el(tag, className, html = '') {
   const node = document.createElement(tag);
   node.className = className;
@@ -227,6 +271,11 @@ export class MapView {
       });
     }
     m.on('click', 'sb-routes-alt', (e) => this.handlers.onRouteClick?.(e.features[0].properties.i));
+    m.on('click', 'sb-fuel', (e) => {
+      const f = e.features[0];
+      const [lon, lat] = f.geometry.coordinates;
+      this.handlers.onFuelClick?.({ name: f.properties.name || '', lon, lat });
+    });
     m.on('mouseenter', 'sb-routes-alt', () => (m.getCanvas().style.cursor = 'pointer'));
     m.on('mouseleave', 'sb-routes-alt', () => (m.getCanvas().style.cursor = ''));
   }
@@ -268,8 +317,37 @@ export class MapView {
     add({ id: 'sb-traffic', type: 'line', source: 'sb-traffic', layout: LINE, paint: { 'line-color': ['match', ['get', 'level'], 1, '#f79009', 2, '#e8590c', 3, '#d92d20', '#7a271a'], 'line-width': width() } });
     add({ id: 'sb-toll', type: 'line', source: 'sb-toll', layout: LINE, paint: { 'line-color': '#ffcc00', 'line-width': width(0.3), 'line-dasharray': [1, 2] } });
     this.addSignals(before);
+    this.addFuel();
     this.apply3D();
     this.styled = true;
+  }
+
+  addFuel() {
+    const m = this.map;
+    if (!m.getSource('openmaptiles') || m.getLayer('sb-fuel')) return;
+    if (!m.hasImage('sb-fuel')) m.addImage('sb-fuel', fuelIcon(), { pixelRatio: 2 });
+    const font = m.getStyle().layers.find((l) => l['source-layer'] === 'poi' && l.layout?.['text-font'])?.layout['text-font'] || ['Noto Sans Regular'];
+    m.addLayer({
+      id: 'sb-fuel',
+      type: 'symbol',
+      source: 'openmaptiles',
+      'source-layer': 'poi',
+      minzoom: 14,
+      filter: ['==', ['get', 'subclass'], 'fuel'],
+      layout: {
+        'icon-image': 'sb-fuel',
+        'icon-size': ['interpolate', ['linear'], ['zoom'], 14, 0.8, 17, 1.05],
+        'icon-allow-overlap': true,
+        'text-field': FUEL_LABEL,
+        'text-font': font,
+        'text-size': 12,
+        'text-anchor': 'top',
+        'text-offset': [0, 1.1],
+        'text-max-width': 8,
+        'text-optional': true,
+      },
+      paint: { 'text-color': this.night ? '#e4e7ec' : '#344054', 'text-halo-color': this.night ? '#101419' : '#fff', 'text-halo-width': 1.5 },
+    });
   }
 
   setSignals(flat) {
