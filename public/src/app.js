@@ -191,6 +191,7 @@ function render() {
   document.body.dataset.mode = state.mode;
   const body = $('sheet-body');
   body.innerHTML = { home: homeSheet, place: placeSheet, routes: routesSheet, nav: () => (state.nav?.alts ? altsSheet() : navSheet()), arrived: arrivedSheet }[state.mode]();
+  if (state.mode === 'nav' && state.nav && state.fix) updateNavSheet(state.nav.navigator.progress(), state.fix);
   document.body.classList.toggle('nav-alts', !!state.nav?.alts);
   $('finder').hidden = !(state.mode === 'home' || state.navSearch);
   document.body.classList.toggle('nav-search', !!state.navSearch);
@@ -509,7 +510,7 @@ async function openAlternatives() {
       .sort((a, b) => a.duration - b.duration)
       .map((r) => ({ route: r, from: 0, time: r.duration, dist: r.distance, via: r.via, toll: r.hasToll }));
     alts.list = [current, ...others];
-    nav.lineAt = 0;
+    drawNavRoutes(nav);
     render();
     if (state.backend.fares && others.length) {
       const pois = others.map((o) => poisAlongRoute(o.route, state.poiData));
@@ -530,7 +531,7 @@ async function openAlternatives() {
 function closeAlternatives() {
   if (!state.nav?.alts) return;
   state.nav.alts = null;
-  state.nav.lineAt = 0;
+  drawNavRoutes(state.nav);
   render();
 }
 
@@ -1015,12 +1016,7 @@ function navTick(fix) {
   const progress = out.progress;
   const position = progress.snapped || [fix.lon, fix.lat];
   map.driveTo(position, fix.heading, fix.speed ?? 0);
-  const now = performance.now();
-  if (!nav.lineAt || (now - nav.lineAt > 1000 && Math.abs(progress.along - nav.lineAlong) > 20)) {
-    map.showRoutes([nav.route, ...(nav.alts?.list?.slice(1).map((a) => a.route) || []), ...(nav.offer ? [nav.offer.route] : [])], 0, progress.along);
-    nav.lineAt = now;
-    nav.lineAlong = progress.along;
-  }
+  if (!nav.lineAt || (performance.now() - nav.lineAt > 1000 && Math.abs(progress.along - nav.lineAlong) > 20)) drawNavRoutes(nav, progress.along);
   updateBanner(progress);
   if (progress.along > nav.lanesTo - 20000 && nav.lanesTo < nav.route.distance) fetchNavLanes(nav, progress.along);
   updateLanes(progress);
@@ -1036,6 +1032,12 @@ function navTick(fix) {
   checkParking(nav, progress);
   if (out.offRoute) reroute(fix);
   if (out.arrived) setTimeout(() => finishNav(true), 1500);
+}
+
+function drawNavRoutes(nav, along = nav.navigator.progress().along) {
+  map.showRoutes([nav.route, ...(nav.alts?.list?.slice(1).map((a) => a.route) || []), ...(nav.offer ? [nav.offer.route] : [])], 0, along);
+  nav.lineAt = performance.now();
+  nav.lineAlong = along;
 }
 
 function useRoute(nav, route) {
@@ -1057,6 +1059,7 @@ function useRoute(nav, route) {
     nav.stopSim?.();
     nav.stopSim = simulate(route, handleFix, { speedup: 3 });
   } else saveMapAlong(route);
+  if (state.fix) navTick(state.fix);
 }
 
 function saveMapAlong(route) {
@@ -1131,7 +1134,7 @@ async function checkTraffic(nav) {
 
 function offerFaster(nav, offer) {
   nav.offer = offer;
-  nav.lineAt = 0;
+  drawNavRoutes(nav);
   const via = offer.route.via?.length ? t('via', { road: offer.route.via.join(' · ') }) : t('fasterTitle');
   const node = $('offer');
   node.style.setProperty('--offer-ms', `${OFFER_MS}ms`);
@@ -1146,9 +1149,10 @@ function offerFaster(nav, offer) {
 
 function clearOffer(nav) {
   clearTimeout(nav.offerTimer);
+  const shown = nav.offer;
   nav.offer = null;
-  nav.lineAt = 0;
   $('offer').hidden = true;
+  if (shown) drawNavRoutes(nav);
 }
 
 function answerOffer(nav, take) {
