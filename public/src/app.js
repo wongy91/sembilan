@@ -236,7 +236,19 @@ function setSlide(offset) {
   measureSheet();
 }
 
+function fitHomeList() {
+  const classes = document.body.classList;
+  if (classes.contains('searching')) return;
+  classes.remove('home-scrolls');
+  if (state.mode !== 'home') return;
+  const sheet = $('sheet');
+  const body = $('sheet-body');
+  const padding = parseFloat(getComputedStyle(sheet).paddingBottom) || 0;
+  classes.toggle('home-scrolls', body.offsetTop + body.offsetHeight + padding > sheet.clientHeight + 1);
+}
+
 function syncSlide() {
+  fitHomeList();
   cancelAnimationFrame(slide.raf);
   slide.raf = 0;
   slide.max = homeSlides() ? collapseDistance() : 0;
@@ -338,7 +350,7 @@ function homeSheet() {
     .slice(0, 3)
     .map(
       (p, i) =>
-        `<button class="list-item" data-action="recent" data-i="${i}"><span class="li-icon">🕘</span><span><b>${esc(p.name)}</b><small>${esc(p.sub)}</small></span></button>`,
+        `<div class="list-row"><button class="list-item" data-action="recent" data-i="${i}"><span class="li-icon">🕘</span><span><b>${esc(p.name)}</b><small>${esc(p.sub)}</small></span></button><button class="icon-btn" data-action="recent-menu" data-i="${i}" aria-label="${esc(t('more'))}">${UI.more}</button></div>`,
     )
     .join('');
   const install = offerInstall() && !installSnoozed() ? installCard() : '';
@@ -1391,6 +1403,24 @@ function closeSaveDialog() {
   render();
 }
 
+function openRecentMenu(place) {
+  if (!place) return;
+  state.recentTarget = place;
+  $('recent-title').textContent = place.name;
+  $('recent-sub').textContent = place.sub;
+  $('dlg-recent').returnValue = '';
+  $('dlg-recent').showModal();
+}
+
+function closeRecentMenu() {
+  const place = state.recentTarget;
+  state.recentTarget = null;
+  if (!place || $('dlg-recent').returnValue !== 'remove') return;
+  store.forget(settings, place);
+  toast(t('recentRemoved'));
+  render();
+}
+
 function checkForUpdate() {
   navigator.serviceWorker?.getRegistration().then((reg) => reg?.update()).catch(() => {});
 }
@@ -1519,6 +1549,8 @@ function bindUi() {
     $('update').hidden = true;
   });
   $('save-cancel').addEventListener('click', () => $('dlg-save').close(''));
+  $('dlg-recent').addEventListener('close', closeRecentMenu);
+  $('recent-cancel').addEventListener('click', () => $('dlg-recent').close(''));
 
   $('btn-locate').addEventListener('click', () => {
     if (state.nav) {
@@ -1545,7 +1577,7 @@ function bindUi() {
   let swipeFrom = null;
   $('sheet').addEventListener('pointerdown', (e) => {
     swipeFrom = state.mode === 'nav' ? e.clientY : null;
-    if (!homeSlides()) return;
+    if (!homeSlides() || (document.body.classList.contains('home-scrolls') && $('sheet-body').contains(e.target))) return;
     Object.assign(slide, { from: e.clientY, base: slide.offset, moved: false, lastY: e.clientY, lastT: e.timeStamp, speed: 0, max: collapseDistance() });
   });
   window.addEventListener('pointermove', (e) => {
@@ -1606,6 +1638,8 @@ function bindUi() {
         return settings[target.dataset.key] ? selectPlace(settings[target.dataset.key]) : toast(t('setHint'));
       case 'recent':
         return selectPlace(settings.recents[i]);
+      case 'recent-menu':
+        return openRecentMenu(settings.recents[i]);
       case 'fav': {
         const s = settings.saved[i];
         return s && selectPlace({ name: s.label, sub: s.label !== s.name ? s.name : s.sub, lon: s.lon, lat: s.lat });

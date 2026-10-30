@@ -476,6 +476,18 @@ body[data-mode='home']:not(.searching) .sheet {
   touch-action: none;
 }
 
+body.home-scrolls:not(.searching) .sheet {
+  display: flex;
+  flex-direction: column;
+}
+
+body.home-scrolls:not(.searching) #sheet-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+
 body[data-mode='home'] .sheet {
   will-change: transform;
 }
@@ -817,6 +829,26 @@ body[data-mode='nav'] .grab {
   display: flex;
   flex-direction: column;
   min-width: 0;
+}
+
+.list-row {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+}
+
+.list-row:last-child {
+  border-bottom: 0;
+}
+
+.list-row .list-item {
+  flex: 1;
+  min-width: 0;
+  border-bottom: 0;
+}
+
+.list-row .icon-btn {
+  color: var(--muted);
 }
 
 .place-head {

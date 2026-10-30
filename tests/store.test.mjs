@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { exportPlaces, findSaved, importPlaces, readPlaces, removeSaved, savePlace } from '../public/src/store.js';
+import { exportPlaces, findSaved, forget, importPlaces, readPlaces, removeSaved, savePlace } from '../public/src/store.js';
 
 const klcc = { name: 'KLCC', sub: 'Kuala Lumpur', lon: 101.7117, lat: 3.1579 };
 const midValley = { name: 'Mid Valley Megamall', sub: 'Kuala Lumpur', lon: 101.6776, lat: 3.1178 };
@@ -45,6 +45,14 @@ test('saving a place adds it once, renames it in place and removes it', () => {
   removeSaved(state, klcc);
   assert.equal(findSaved(state, klcc), null);
   assert.equal(state.saved.length, 1);
+});
+
+test('forgetting a recent removes only that place, even when its coordinates are rounded', () => {
+  const state = { recents: [klcc, midValley, pasarSeni] };
+  forget(state, { ...midValley, lon: midValley.lon + 0.00002 });
+  assert.deepEqual(state.recents.map((p) => p.name), ['KLCC', 'Pasar Seni — 中央艺术坊']);
+  forget(state, midValley);
+  assert.equal(state.recents.length, 2, 'forgetting a place that is not there changes nothing');
 });
 
 test('saved places travel in a places link and merge on import', () => {

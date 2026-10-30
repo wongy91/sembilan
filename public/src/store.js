@@ -48,6 +48,11 @@ export function remember(state, place) {
   save(state);
 }
 
+export function forget(state, place) {
+  state.recents = state.recents.filter((p) => !samePlace(p, place));
+  save(state);
+}
+
 const MAX_SAVED = 50;
 
 export function findSaved(state, place) {
