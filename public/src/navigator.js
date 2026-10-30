@@ -3,6 +3,8 @@ import { SILENT, chain, continueFor, instruction, withDistance } from './instruc
 import { ALERT_LEAD, alertText } from './pois.js';
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+export const SPEEDING_MARGIN = 5;
+const SPEEDING_QUIET = 60000;
 
 function timeAfter(route, index, along) {
   const steps = route.steps;
@@ -37,6 +39,8 @@ export class Navigator {
     this.lastOnTime = null;
     this.arrived = false;
     this.started = resumed;
+    this.speeding = false;
+    this.speedingAt = -Infinity;
   }
 
   setPois(pois) {
@@ -60,7 +64,7 @@ export class Navigator {
   }
 
   update(fix) {
-    const out = { speech: [], alerts: [], offRoute: false, arrived: false, progress: null };
+    const out = { speech: [], alerts: [], offRoute: false, arrived: false, speeding: false, progress: null };
     if (this.arrived) {
       out.arrived = true;
       out.progress = this.progress();
@@ -163,7 +167,21 @@ export class Navigator {
     }
 
     out.progress = this.progress(loc);
+    out.speeding = this.checkSpeed(speed, out.progress.speedLimit, fix.time ?? Date.now());
     return out;
+  }
+
+  checkSpeed(speed, limit, time) {
+    const kmh = Math.round((speed ?? 0) * 3.6);
+    if (!limit || kmh <= limit) {
+      this.speeding = false;
+      return false;
+    }
+    if (this.speeding || kmh <= limit + SPEEDING_MARGIN) return false;
+    this.speeding = true;
+    if (time - this.speedingAt < SPEEDING_QUIET) return false;
+    this.speedingAt = time;
+    return true;
   }
 
   progress(loc = null, off = false) {

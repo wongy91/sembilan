@@ -3,7 +3,7 @@
 [![Test](https://github.com/wongy91/sembilan/actions/workflows/test.yml/badge.svg)](https://github.com/wongy91/sembilan/actions/workflows/test.yml)
 [![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 
-Free, open-source turn-by-turn navigation for Malaysia that runs in the browser. Voice guidance in English and Bahasa Melayu, PLUS toll fares, speed-camera and R&R alerts, live traffic, lane guidance and community reports. No app store and no sign-up.
+Free, open-source turn-by-turn navigation for Malaysia that runs in the browser. Voice guidance in English, Bahasa Melayu and Chinese, PLUS toll fares, speed-camera and R&R alerts, live traffic, lane guidance and community reports. No app store and no sign-up.
 
 ## Features
 
@@ -19,9 +19,9 @@ Free, open-source turn-by-turn navigation for Malaysia that runs in the browser.
 | Community reports | Accident, police, hazard, jam, road closed, flood, pothole. Other drivers confirm or clear them |
 | Search | Places and street addresses with the distance to each. Nearby ⛽ petrol, 🍜 food, 🅿️ parking and 🔌 EV charging, also while driving. Addresses use TomTom when a key is set |
 | Map | Day and night themes (automatic by time), 2D or 3D buildings, long-press to drop a pin |
-| While driving | Arrival time that follows live traffic (refreshed every 5 minutes), speedometer with speed-limit sign, current street name, quick mute, search and settings, share ETA, arrival screen, screen stays awake |
-| Saved places | Home, Work, your own named places (⭐ Save on any place) and recent places, kept on your phone. **Copy my places** makes a private link that adds them on another phone or in the home-screen app |
-| Offline and install | Opens instantly from an offline copy. An **Install app** card installs it in one tap where the browser allows it, and otherwise shows step-by-step instructions for iPhone Safari, other iPhone browsers, Android, Mac Safari and in-app browsers. When a new version is ready, a small Restart prompt appears; it never interrupts navigation |
+| While driving | Arrival time that follows live traffic (refreshed every 5 minutes), a green sign with the exit number and destinations for highway exits, speedometer with speed-limit sign and a ding when you go more than 5 km/h over the limit, a 🅿️ card with car parks near your destination 1 km before you arrive, current street name, quick mute, search and settings, share ETA, arrival screen, screen stays awake |
+| Saved places | Home, Work, your own named places (⭐ Save on any place) and recent places, kept on your phone. Home and Work show the drive time from where you are ("Home · 23 min"), refreshed at most every 10 minutes. **Copy my places** makes a private link that adds them on another phone or in the home-screen app |
+| Offline and install | Opens instantly from an offline copy. When you start a trip, the map along the route is saved (up to 15 MB of map tiles), so tunnels and areas without signal don't show a blank map. An **Install app** card installs it in one tap where the browser allows it, and otherwise shows step-by-step instructions for iPhone Safari, other iPhone browsers, Android, Mac Safari and in-app browsers. When a new version is ready, a small Restart prompt appears; it never interrupts navigation |
 
 ## Quick start
 
@@ -129,7 +129,7 @@ Everything secret is a Worker secret, set with `npx wrangler secret put <NAME>`.
 
 **Security headers.** `public/_headers` gives every static file a Content-Security-Policy, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` and `Permissions-Policy`; `npm run dev` applies the same file. When you add a provider the app fetches from, add its host to `connect-src`: `tests/headers.test.mjs` fails until you do. API responses come from the Worker and don't get these headers.
 
-**Privacy.** The app's **Settings → Privacy** screen says the same in plain English and Malay; keep the two in step. Sembilan has no accounts and doesn't store anyone's location. Saved places stay on your phone; a **Copy my places** link carries them after the `#`, which browsers never send to a server. Your start point and destination go to the routing provider to plan the trip. A community report stores its type, position, heading, times and votes. To rate-limit reports and votes without storing IP addresses, it also stores a hash of the reporter's IP that changes daily. Error reports carry the error message, the app version, the screen it happened on and a coarse browser name, with coordinates and IP addresses removed; Workers Logs keeps them for 3 days on the free plan. To enforce the request limits, Cloudflare counts each IP address's requests over a minute; Sembilan doesn't store those counts or addresses.
+**Privacy.** The app's **Settings → Privacy** screen says the same in plain English, Malay and Chinese; keep the three in step. Sembilan has no accounts and doesn't store anyone's location. Saved places stay on your phone; a **Copy my places** link carries them after the `#`, which browsers never send to a server. Your start point and destination go to the routing provider to plan the trip. To show the drive time to Home and Work, your position and those two places go to the routing provider when you open the app, at most once every 10 minutes. Near the end of a trip, your destination is used to search for parking. A community report stores its type, position, heading, times and votes. To rate-limit reports and votes without storing IP addresses, it also stores a hash of the reporter's IP that changes daily. Error reports carry the error message, the app version, the screen it happened on and a coarse browser name, with coordinates and IP addresses removed; Workers Logs keeps them for 3 days on the free plan. To enforce the request limits, Cloudflare counts each IP address's requests over a minute; Sembilan doesn't store those counts or addresses.
 
 ## Data
 

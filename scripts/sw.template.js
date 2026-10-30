@@ -8,6 +8,7 @@ const LIBRARY = [
   'https://cdn.jsdelivr.net/npm/maplibre-gl@5.6.0/dist/maplibre-gl.css',
 ];
 const MAX_TILES = 4000;
+const SAVE_BYTES = 15 * 1024 * 1024;
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -55,6 +56,30 @@ async function staleWhileRevalidate(request) {
     .catch(() => null);
   return hit || (await update) || Response.error();
 }
+
+async function saveTiles(urls) {
+  const cache = await caches.open(TILES);
+  const queue = urls.filter((url) => typeof url === 'string' && url.startsWith('https://tiles.openfreemap.org/'));
+  let bytes = 0;
+  const work = async () => {
+    while (queue.length && bytes < SAVE_BYTES) {
+      const url = queue.shift();
+      if (await cache.match(url)) continue;
+      try {
+        const res = await fetch(url, { mode: 'cors' });
+        if (!res.ok) continue;
+        bytes += Number(res.headers.get('content-length')) || (await res.clone().arrayBuffer()).byteLength;
+        await cache.put(url, res);
+      } catch {}
+    }
+  };
+  await Promise.all([work(), work(), work(), work()]);
+  await trim(cache);
+}
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'save-tiles' && Array.isArray(event.data.urls)) event.waitUntil(saveTiles(event.data.urls));
+});
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;

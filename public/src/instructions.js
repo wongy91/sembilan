@@ -199,6 +199,21 @@ export function instruction(step, lang = 'ms', { spoken = false } = {}) {
   }
 }
 
+const SIGNED = new Set(['keep', 'ramp', 'exit']);
+
+export function bannerOf(step, lang = 'ms') {
+  const toward = SIGNED.has(step.kind) ? (step.toward || []).slice(0, 3) : [];
+  const exit = SIGNED.has(step.kind) ? step.exitNumber || '' : '';
+  const ref = step.refs?.[0] || '';
+  if (!toward.length && !exit) return { text: instruction(step, lang), shield: step.names?.[0] ? ref : '', sign: null };
+  const bare = { kind: step.kind, modifier: step.modifier, names: toward.length ? [] : step.names, refs: toward.length ? [] : step.refs };
+  return {
+    text: instruction(bare, lang),
+    shield: !toward.length && step.names?.[0] ? ref : '',
+    sign: { exit, ref: toward.length ? ref : '', toward },
+  };
+}
+
 export function spokenDistance(meters, lang = 'ms') {
   const P = phrases(lang);
   if (meters >= 950) {

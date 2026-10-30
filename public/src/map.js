@@ -1,4 +1,4 @@
-import { slice } from './geo.js';
+import { slice, tilesAlong } from './geo.js';
 import { UI } from './icons.js';
 import { REPORT_ICON } from './reports.js';
 
@@ -447,6 +447,13 @@ export class MapView {
 
   flyTo(lonLat, zoom = 15) {
     this.map.easeTo({ center: lonLat, zoom, bearing: 0, pitch: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 }, duration: 700 });
+  }
+
+  tileUrls(coords, cum) {
+    const template = this.map.getSource('openmaptiles')?.tiles?.[0];
+    if (!template) return [];
+    const tiles = [...tilesAlong(coords, cum, 14, 400), ...tilesAlong(coords, cum, 12, 2000)];
+    return tiles.map(([z, x, y]) => template.replace('{z}', z).replace('{x}', x).replace('{y}', y));
   }
 
   bounds() {

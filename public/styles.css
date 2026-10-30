@@ -308,6 +308,47 @@ body.searching .fab-menu {
   height: 34px;
 }
 
+#man-sign {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  border-radius: 12px;
+  background: #0b6e3c;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+#man-sign b {
+  flex: 1;
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 800;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.sign-exit {
+  flex: none;
+  padding: 1px 8px;
+  border-radius: 6px;
+  background: #fff;
+  color: #0b6e3c;
+  font-size: 16px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+#man-sign .shield {
+  flex: none;
+  border: 2px solid #fff;
+  font-size: 16px;
+  vertical-align: 0;
+}
+
 #lanes {
   flex-basis: 100%;
   display: flex;
@@ -730,6 +771,18 @@ body[data-mode='nav'] .grab {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+.shortcut .commute {
+  color: var(--accent);
+  font-style: normal;
+  font-weight: 900;
+}
+
+.shortcut .commute:not(:empty)::after {
+  content: ' · ';
+  color: var(--muted);
+  font-weight: 600;
 }
 
 .shortcut-icon,
@@ -1595,8 +1648,89 @@ body.nav-alts .sheet {
   }
 }
 
+#parking {
+  position: fixed;
+  left: 14px;
+  right: 14px;
+  bottom: calc(var(--sheet-h, 0px) + 14px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  padding: 8px 12px 14px;
+  border-radius: var(--radius);
+  background: var(--card);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  z-index: 4;
+  animation: drop 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.parking-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-left: 6px;
+}
+
+.parking-head b {
+  overflow: hidden;
+  font-size: 17px;
+  font-weight: 900;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.parking-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 6px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.parking-row > span:first-child {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.parking-row b,
+.parking-row small {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.parking-row small {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.parking-row .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  min-height: 42px;
+  padding: 0 16px;
+  box-shadow: none;
+}
+
+.parking-row .btn svg {
+  width: 16px;
+  height: 16px;
+}
+
 @media (min-width: 900px) {
-  #offer {
+  #offer,
+  #parking {
     left: auto;
     width: 440px;
   }

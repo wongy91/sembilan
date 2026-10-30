@@ -3,8 +3,8 @@ import { KL, MapView } from './map.js';
 import { fmtAgo, fmtClock, fmtDistance, fmtDuration, getLang, setLang, t } from './i18n.js';
 import { nearbyPlaces, reversePlace, searchPlaces } from './search.js';
 import { fasterRoute, loadLanes, pickFaster, planRoutes } from './routing.js';
-import { Navigator, timeLeft } from './navigator.js';
-import { instruction, maneuverIcon, roadName } from './instructions.js';
+import { Navigator, SPEEDING_MARGIN, timeLeft } from './navigator.js';
+import { bannerOf, maneuverIcon, roadName } from './instructions.js';
 import { poisAlongRoute, reportPois, summarize, trafficPois } from './pois.js';
 import { attachFares, fareGroups, fareKeys, fetchFares, priceRoute } from './fares.js';
 import { bbox, bearing, haversine, locate, pointAt } from './geo.js';
@@ -42,6 +42,8 @@ const state = {
   alertTimer: null,
   toastTimer: null,
   myReports: new Set(),
+  backendKnown: false,
+  commute: {},
 };
 
 setLang(settings.lang);
@@ -87,6 +89,14 @@ const TRAFFIC_EVERY = 5 * 60000;
 const OFFER_MS = 20000;
 const QUIET_AFTER_CHANGE = 2 * 60000;
 const QUIET_AFTER_DECLINE = 10 * 60000;
+const SPEEDING_TONES = [1175];
+const PARKING_AT = 1000;
+const PARKING_WITHIN = 800;
+const PARKING_MS = 30000;
+const PARKING_DEST = /park|letak kereta|停车/i;
+const COMMUTE_TTL = 10 * 60000;
+const COMMUTE_HERE = 300;
+const COMMUTE_ACCURACY = 1000;
 
 const map = createMap();
 window.sembilan = { map, state, checkTraffic: () => state.nav && checkTraffic(state.nav) };
@@ -251,12 +261,47 @@ function collapseHome(collapsed) {
   animateSlide(collapsed ? slide.max : 0);
 }
 
+function commuteText(key) {
+  const time = state.commute[key]?.time;
+  return time != null ? fmtDuration(time) : '';
+}
+
 function shortcut(key) {
   const place = settings[key];
   return `<button class="shortcut" data-action="saved" data-key="${key}">
       <span class="shortcut-icon">${key === 'home' ? '🏠' : '💼'}</span>
-      <span><b>${esc(t(key))}</b><small>${esc(place ? place.name : t('notSet'))}</small></span>
+      <span><b>${esc(t(key))}</b><small><em class="commute">${esc(place ? commuteText(key) : '')}</em>${esc(place ? place.name : t('notSet'))}</small></span>
     </button>`;
+}
+
+function refreshCommute() {
+  if (state.mode !== 'home' || !state.fix || !state.backendKnown || state.fix.accuracy > COMMUTE_ACCURACY) return;
+  const from = [state.fix.lon, state.fix.lat];
+  for (const key of ['home', 'work']) {
+    const place = settings[key];
+    const old = state.commute[key];
+    if (!place || haversine(from, [place.lon, place.lat]) < COMMUTE_HERE) {
+      if (old) {
+        delete state.commute[key];
+        showCommute(key);
+      }
+      continue;
+    }
+    if (old && old.key === routeKey(place) && Date.now() - old.at < COMMUTE_TTL && haversine(old.from, from) < 500) continue;
+    const entry = { key: routeKey(place), from, at: Date.now(), time: old?.time ?? null, promise: planRoutes(from, [place.lon, place.lat], routeOptions()) };
+    state.commute[key] = entry;
+    entry.promise
+      .then((routes) => {
+        entry.time = Math.min(...routes.map((r) => r.duration));
+        if (state.commute[key] === entry) showCommute(key);
+      })
+      .catch(() => {});
+  }
+}
+
+function showCommute(key) {
+  const node = document.querySelector(`.shortcut[data-key="${key}"] .commute`);
+  if (node) node.textContent = commuteText(key);
 }
 
 function installCard() {
@@ -645,7 +690,8 @@ function prefetchRoutes(place) {
   state.prefetch = null;
   if (!state.fix) return;
   const from = [state.fix.lon, state.fix.lat];
-  const entry = { key: routeKey(place), from, at: Date.now(), promise: planRoutes(from, [place.lon, place.lat], routeOptions()) };
+  const commute = Object.values(state.commute).find((e) => e.key === routeKey(place) && Date.now() - e.at < 120000 && haversine(e.from, from) < 150);
+  const entry = commute || { key: routeKey(place), from, at: Date.now(), promise: planRoutes(from, [place.lon, place.lat], routeOptions()) };
   state.prefetch = entry;
   entry.promise
     .then((routes) => {
@@ -692,6 +738,7 @@ function goHome() {
   map?.clearRoutes();
   map?.showPin(null);
   render();
+  refreshCommute();
 }
 
 async function loadPrices(routes, poisList) {
@@ -803,8 +850,10 @@ function startNav(simulated) {
     offer: null,
     routeChangedAt: Date.now(),
     declinedAt: 0,
+    parking: route.distance < 2 * PARKING_AT ? { skipped: true } : null,
   };
   fetchNavLanes(state.nav, 0);
+  if (!simulated) saveMapAlong(route);
   state.routes = [route];
   state.selected = 0;
   state.mode = 'nav';
@@ -839,6 +888,7 @@ function finishNav(arrived) {
   clearInterval(nav.reportTimer);
   clearInterval(nav.trafficTimer);
   clearOffer(nav);
+  hideParking(nav);
   releaseWakeLock();
   if (!arrived) voice.stop();
   state.nav = null;
@@ -869,8 +919,13 @@ function updateBanner(progress) {
   const step = progress.next;
   $('man-icon').innerHTML = MANEUVER[maneuverIcon(step)] || MANEUVER.straight;
   $('man-dist').textContent = progress.nextDistance < 15 ? t('now') : fmtDistance(progress.nextDistance);
-  const shield = step.refs?.[0] && step.names?.[0] ? `<span class="shield">${esc(step.refs[0])}</span> ` : '';
-  $('man-text').innerHTML = shield + esc(instruction(step, getLang()));
+  const { text, shield, sign } = bannerOf(step, getLang());
+  $('man-text').innerHTML = (shield ? `<span class="shield">${esc(shield)}</span> ` : '') + esc(text);
+  $('man-sign').hidden = !sign;
+  if (sign) {
+    const badges = `${sign.exit ? `<span class="sign-exit">${esc(t('exitSign', { n: sign.exit }))}</span>` : ''}${sign.ref ? `<span class="shield">${esc(sign.ref)}</span>` : ''}`;
+    $('man-sign').innerHTML = `${badges}<b>${esc(sign.toward.join(' · '))}</b>`;
+  }
   const then = progress.following;
   $('man-then').hidden = !then;
   if (then) $('man-then').innerHTML = `<span>${esc(t('then'))}</span>${MANEUVER[maneuverIcon(then)] || ''}`;
@@ -918,7 +973,7 @@ function updateNavSheet(progress, fix) {
   $('speed').textContent = String(kmh);
   $('speed-limit').hidden = !limit;
   if (limit) $('speed-limit').textContent = String(limit);
-  $('speedo').classList.toggle('over', !!limit && kmh > limit + 5);
+  $('speedo').classList.toggle('over', !!limit && kmh > limit + SPEEDING_MARGIN);
 }
 
 function alertLabel(a) {
@@ -955,6 +1010,7 @@ function navTick(fix) {
   const out = nav.navigator.update(fix);
   if (out.speech.length) voice.say(out.speech);
   if (out.alerts.some((a) => a.kind === 'camera')) voice.chime();
+  if (out.speeding) voice.chime(SPEEDING_TONES);
   out.alerts.forEach(showAlert);
   const progress = out.progress;
   const position = progress.snapped || [fix.lon, fix.lat];
@@ -977,6 +1033,7 @@ function navTick(fix) {
   $('road-pill').textContent = road;
   $('road-pill').hidden = !road;
   updateNavSheet(progress, fix);
+  checkParking(nav, progress);
   if (out.offRoute) reroute(fix);
   if (out.arrived) setTimeout(() => finishNav(true), 1500);
 }
@@ -999,7 +1056,50 @@ function useRoute(nav, route) {
   if (nav.simulated) {
     nav.stopSim?.();
     nav.stopSim = simulate(route, handleFix, { speedup: 3 });
+  } else saveMapAlong(route);
+}
+
+function saveMapAlong(route) {
+  if (navigator.connection?.saveData) return;
+  const urls = map.tileUrls(route.coords, route.cum);
+  if (urls.length) navigator.serviceWorker?.controller?.postMessage({ type: 'save-tiles', urls });
+}
+
+function checkParking(nav, progress) {
+  if (nav.parking || nav.offer || progress.remaining > PARKING_AT) return;
+  const dest = nav.dest;
+  if (PARKING_DEST.test(`${dest.name} ${dest.sub}`)) {
+    nav.parking = { skipped: true };
+    return;
   }
+  const parking = (nav.parking = { places: null });
+  nearbyPlaces('parking', { near: [dest.lon, dest.lat], tomtom: state.backend.search, label: t('catParking') })
+    .then((list) => {
+      if (state.nav !== nav || nav.parking !== parking || nav.dest !== dest) return;
+      parking.places = list.filter((p) => p.dist <= PARKING_WITHIN).slice(0, 3);
+      if (parking.places.length) showParking(nav);
+    })
+    .catch(() => {});
+}
+
+function showParking(nav) {
+  const node = $('parking');
+  node.style.setProperty('--offer-ms', `${PARKING_MS}ms`);
+  node.innerHTML = `<div class="parking-head"><b>🅿️ ${esc(t('parkingNear', { name: nav.dest.name }))}</b><button class="icon-btn" type="button" data-parking="close" aria-label="${esc(t('close'))}">${UI.close}</button></div>
+    ${nav.parking.places
+      .map(
+        (p, i) =>
+          `<button class="parking-row" type="button" data-parking="${i}"><span><b>${esc(p.name)}</b><small>${esc(t('fromDest', { d: fmtDistance(p.dist) }))}</small></span><span class="btn primary">${UI.navArrow}${esc(t('go'))}</span></button>`,
+      )
+      .join('')}
+    <i class="offer-timer" aria-hidden="true"></i>`;
+  node.hidden = false;
+  nav.parkingTimer = setTimeout(() => hideParking(nav), PARKING_MS);
+}
+
+function hideParking(nav) {
+  clearTimeout(nav.parkingTimer);
+  $('parking').hidden = true;
 }
 
 function remainingTime(nav, progress) {
@@ -1020,7 +1120,7 @@ async function checkTraffic(nav) {
     if (state.nav !== nav || nav.route !== route || !result.current) return;
     nav.fresh = { route: result.current, from: progress.along };
     const now = Date.now();
-    const quiet = nav.alts || now - nav.routeChangedAt < QUIET_AFTER_CHANGE || now - nav.declinedAt < QUIET_AFTER_DECLINE || result.current.duration < 600;
+    const quiet = nav.alts || !$('parking').hidden || now - nav.routeChangedAt < QUIET_AFTER_CHANGE || now - nav.declinedAt < QUIET_AFTER_DECLINE || result.current.duration < 600;
     const found = quiet ? null : pickFaster(result);
     if (found) offerFaster(nav, found);
   } catch {
@@ -1063,7 +1163,7 @@ function answerOffer(nav, take) {
   toast(t('routeChanged'));
 }
 
-async function changeDestination(place) {
+async function changeDestination(place, parking = false) {
   const nav = state.nav;
   const fix = state.fix;
   if (!nav || !fix) return;
@@ -1077,6 +1177,10 @@ async function changeDestination(place) {
     });
     if (state.nav !== nav) return;
     nav.dest = place;
+    if (!parking) {
+      hideParking(nav);
+      nav.parking = route.distance < 2 * PARKING_AT ? { skipped: true } : null;
+    }
     state.place = place;
     store.remember(settings, place);
     map.showPin([place.lon, place.lat]);
@@ -1177,6 +1281,7 @@ function handleFix(fix) {
   state.fix = fix;
   if (state.nav) return navTick(fix);
   if (state.mode === 'place' && !state.prefetch) prefetchRoutes(state.place);
+  refreshCommute();
   map.setUser([fix.lon, fix.lat], fix.heading, false);
   if (!state.centered && state.mode === 'home') {
     state.centered = true;
@@ -1394,6 +1499,14 @@ function bindUi() {
     const button = e.target.closest('[data-offer]');
     if (button && state.nav) answerOffer(state.nav, button.dataset.offer === 'take');
   });
+  $('parking').addEventListener('click', (e) => {
+    const button = e.target.closest('[data-parking]');
+    const nav = state.nav;
+    if (!button || !nav) return;
+    hideParking(nav);
+    const place = nav.parking?.places?.[Number(button.dataset.parking)];
+    if (place) changeDestination(place, true);
+  });
   $('dlg-save').addEventListener('close', closeSaveDialog);
   $('update-later').innerHTML = UI.close;
   $('update-restart').addEventListener('click', () => location.reload());
@@ -1571,6 +1684,7 @@ function bindUi() {
     }
     checkForUpdate();
     setTheme();
+    refreshCommute();
     if (state.nav) acquireWakeLock();
   });
   new ResizeObserver(() => slide.from == null && !slide.raf && syncSlide()).observe($('sheet'));
@@ -1617,6 +1731,8 @@ fetch('data/pois.json')
   .catch(() => {});
 health().then((backend) => {
   state.backend = backend;
+  state.backendKnown = true;
+  refreshCommute();
   $('row-traffic').hidden = !backend.traffic || !map;
   if (!map) return;
   if (backend.traffic && settings.traffic) map.setTraffic(true);

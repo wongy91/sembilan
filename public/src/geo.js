@@ -170,6 +170,26 @@ export function thin(coords, spacing) {
   return out;
 }
 
+export function tileOf([lon, lat], zoom) {
+  const n = 2 ** zoom;
+  const y = (1 - Math.asinh(Math.tan((lat * Math.PI) / 180)) / Math.PI) / 2;
+  return [Math.floor(((lon + 180) / 360) * n), Math.floor(y * n)];
+}
+
+export function tilesAlong(coords, cum, zoom, margin) {
+  const tiles = new Map();
+  const total = cum[cum.length - 1];
+  for (let along = 0; along < total + margin; along += margin) {
+    const [lon, lat] = pointAt(coords, cum, Math.min(along, total));
+    const dLat = margin / 111320;
+    const dLon = dLat / Math.cos((lat * Math.PI) / 180);
+    const [x0, y0] = tileOf([lon - dLon, lat + dLat], zoom);
+    const [x1, y1] = tileOf([lon + dLon, lat - dLat], zoom);
+    for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) tiles.set(`${zoom}/${x}/${y}`, [zoom, x, y]);
+  }
+  return [...tiles.values()];
+}
+
 export function bbox(coords) {
   let minX = Infinity;
   let minY = Infinity;

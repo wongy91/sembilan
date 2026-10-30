@@ -72,10 +72,10 @@ export function say(items, { force = false } = {}) {
   }
 }
 
-export function chime() {
+export function chime(tones = [880, 1320]) {
   if (!enabled || !audio) return;
   const now = audio.currentTime;
-  [880, 1320].forEach((freq, i) => {
+  tones.forEach((freq, i) => {
     const osc = audio.createOscillator();
     const gain = audio.createGain();
     osc.frequency.value = freq;
