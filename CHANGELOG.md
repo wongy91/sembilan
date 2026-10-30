@@ -4,6 +4,13 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.15.2] - 2026-10-30
+
+### Fixed
+
+- The **Routes** list during a trip couldn't be scrolled, so routes below the screen were out of reach. It now scrolls, and so do search results while driving. Swiping the bottom panel up or down still opens and closes the trip menu.
+- The menu button covered the **Routes** title. It's now hidden while the list is open, and the list stays below the turn banner on smaller phones.
+
 ## [0.15.1] - 2026-10-30
 
 ### Fixed
@@ -214,7 +221,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.15.1...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.15.2...HEAD
+[0.15.2]: https://github.com/wongy91/sembilan/compare/0.15.1...0.15.2
 [0.15.1]: https://github.com/wongy91/sembilan/compare/0.15.0...0.15.1
 [0.15.0]: https://github.com/wongy91/sembilan/compare/0.14.1...0.15.0
 [0.14.1]: https://github.com/wongy91/sembilan/compare/0.14.0...0.14.1
