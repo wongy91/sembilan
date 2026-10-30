@@ -1142,7 +1142,7 @@ body[data-mode='routes'] .sheet {
   box-shadow: 0 -1px 0 var(--line);
 }
 
-body[data-mode='nav'] .sheet {
+body[data-mode='nav']:not(.searching) .sheet {
   padding-top: 14px;
 }
 
