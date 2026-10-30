@@ -4,6 +4,16 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-10-30
+
+### Added
+
+- **Remove a recent place**: each recent place on the home screen has a **⋯** button. Tap it, then **Remove from recent**. The next recent place moves up.
+
+### Fixed
+
+- On the home screen, a list taller than the panel was cut off at the bottom and couldn't be scrolled. The list now scrolls under the search box, and dragging the handle or search box still moves the panel up and down.
+
 ## [0.15.2] - 2026-10-30
 
 ### Fixed
@@ -221,7 +231,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.15.2...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.16.0...HEAD
+[0.16.0]: https://github.com/wongy91/sembilan/compare/0.15.2...0.16.0
 [0.15.2]: https://github.com/wongy91/sembilan/compare/0.15.1...0.15.2
 [0.15.1]: https://github.com/wongy91/sembilan/compare/0.15.0...0.15.1
 [0.15.0]: https://github.com/wongy91/sembilan/compare/0.14.1...0.15.0

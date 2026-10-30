@@ -1,6 +1,6 @@
 {
   "name": "sembilan",
-  "version": "0.15.2",
+  "version": "0.16.0",
   "private": true,
   "description": "Free, open-source turn-by-turn navigation for Malaysia that runs in the browser: English, Malay and Chinese voice guidance, toll fares, speed-camera and R&R alerts, live traffic, lane guidance and community reports.",
   "license": "AGPL-3.0-or-later",
