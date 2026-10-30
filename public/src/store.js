@@ -7,6 +7,7 @@ const DEFAULTS = {
   night: 'auto',
   avoidTolls: false,
   avoidHighways: false,
+  motorcycle: false,
   threeD: false,
   traffic: true,
   home: null,

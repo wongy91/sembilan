@@ -434,6 +434,7 @@ function routesSheet() {
     <div class="chips">
       <label class="chip toggle"><input type="checkbox" data-action="avoid-tolls" ${settings.avoidTolls ? 'checked' : ''}> ${esc(t('avoidTolls'))}</label>
       <label class="chip toggle"><input type="checkbox" data-action="avoid-highways" ${settings.avoidHighways ? 'checked' : ''}> ${esc(t('avoidHighways'))}</label>
+      <label class="chip toggle"><input type="checkbox" data-action="motorcycle" ${settings.motorcycle ? 'checked' : ''}> 🏍️ ${esc(t('motorcycle'))}</label>
     </div>`;
   if (state.planning) {
     const card = '<div class="route-card skeleton" aria-hidden="true"><span></span><span></span><span></span></div>';
@@ -443,7 +444,7 @@ function routesSheet() {
   const live = state.routes[0]?.provider === 'tomtom';
   const priced = state.prices.some((p) => p?.priced);
   return `${head}<div class="route-list">${state.routes.map(routeCard).join('')}</div>
-    <p class="muted small">${esc(t(live ? 'liveTraffic' : 'noLiveTraffic'))}${priced ? ` · ${esc(t('fareNote'))}` : ''}</p>
+    <p class="muted small">${esc(t(settings.motorcycle ? 'motorcycleNote' : live ? 'liveTraffic' : 'noLiveTraffic'))}${priced ? ` · ${esc(t('fareNote'))}` : ''}</p>
     <div class="actions sticky">
       <button class="btn primary big" data-action="start">${esc(t('start'))}</button>
       <button class="btn" data-action="demo">${esc(t('demo'))}</button>
@@ -528,7 +529,7 @@ async function openAlternatives() {
     alts.list = [current, ...others];
     drawNavRoutes(nav);
     render();
-    if (state.backend.fares && others.length) {
+    if (showFares() && others.length) {
       const pois = others.map((o) => poisAlongRoute(o.route, state.poiData));
       loadPrices(others.map((o) => o.route), pois).then((prices) => {
         if (nav.alts !== alts) return;
@@ -736,10 +737,11 @@ async function runNearby(cat) {
   }
 }
 
-const routeKey = (place) => `${place.lon.toFixed(5)},${place.lat.toFixed(5)}|${+settings.avoidTolls}${+settings.avoidHighways}${+state.backend.traffic}`;
+const routeKey = (place) => `${place.lon.toFixed(5)},${place.lat.toFixed(5)}|${+settings.avoidTolls}${+settings.avoidHighways}${+state.backend.traffic}${+settings.motorcycle}`;
+const showFares = () => state.backend.fares && !settings.motorcycle;
 
 function routeOptions() {
-  return { avoidTolls: settings.avoidTolls, avoidHighways: settings.avoidHighways, liveTraffic: state.backend.traffic };
+  return { avoidTolls: settings.avoidTolls, avoidHighways: settings.avoidHighways, liveTraffic: state.backend.traffic, motorcycle: settings.motorcycle };
 }
 
 function driveOptions(nav, fix) {
@@ -850,7 +852,7 @@ async function plan() {
   }
   state.planning = false;
   render();
-  if (state.routes.length && state.backend.fares) {
+  if (state.routes.length && showFares()) {
     const routes = state.routes;
     loadPrices(routes, state.routePois).then((prices) => {
       if (state.routes !== routes || state.mode !== 'routes') return;
@@ -937,7 +939,7 @@ function startNav(simulated) {
     refreshReports();
     state.nav.reportTimer = setInterval(refreshReports, 90000);
   }
-  if (state.backend.traffic) {
+  if (state.backend.traffic && !settings.motorcycle) {
     const nav = state.nav;
     nav.trafficTimer = setInterval(() => checkTraffic(nav), TRAFFIC_EVERY);
   }
@@ -1120,7 +1122,7 @@ function useRoute(nav, route, announce = false) {
   nav.lineAt = 0;
   nav.basePois = [...poisAlongRoute(route, state.poiData), ...trafficPois(route)];
   nav.pois = [...nav.basePois, ...reportPois(route, nav.reports)];
-  if (state.backend.fares) loadPrices([route], [nav.basePois]);
+  if (showFares()) loadPrices([route], [nav.basePois]);
   nav.navigator = new Navigator(route, { lang: getLang(), pois: nav.pois, resumed: true, announce });
   state.routes = [route];
   map.setPois(nav.pois);
@@ -1242,12 +1244,7 @@ async function changeDestination(place, parking = false) {
   if (!nav || !fix) return;
   toast(t('rerouting'));
   try {
-    const [route] = await planRoutes([fix.lon, fix.lat], [place.lon, place.lat], {
-      avoidTolls: settings.avoidTolls,
-      avoidHighways: settings.avoidHighways,
-      heading: fix.heading,
-      liveTraffic: state.backend.traffic,
-    });
+    const [route] = await planRoutes([fix.lon, fix.lat], [place.lon, place.lat], { ...routeOptions(), heading: fix.heading });
     if (state.nav !== nav) return;
     nav.dest = place;
     if (!parking) {
@@ -1435,6 +1432,7 @@ function fillSettings() {
   $('set-traffic').checked = settings.traffic;
   $('set-tolls').checked = settings.avoidTolls;
   $('set-highways').checked = settings.avoidHighways;
+  $('set-moto').checked = settings.motorcycle;
   const voices = voice.available();
   $('set-voice-name').innerHTML =
     `<option value="">${esc(t('voiceAuto'))}</option>` +
@@ -1565,7 +1563,7 @@ function changeSetting(key, value) {
     if (!state.nav) map.map.easeTo({ pitch: value ? 55 : 0, duration: 500 });
   }
   if (key === 'traffic') map?.setTraffic(value && state.backend.traffic);
-  if ((key === 'avoidTolls' || key === 'avoidHighways') && state.mode === 'routes') plan();
+  if ((key === 'avoidTolls' || key === 'avoidHighways' || key === 'motorcycle') && state.mode === 'routes') plan();
 }
 
 function bindUi() {
@@ -1629,6 +1627,7 @@ function bindUi() {
   $('set-traffic').addEventListener('change', (e) => changeSetting('traffic', e.target.checked));
   $('set-tolls').addEventListener('change', (e) => changeSetting('avoidTolls', e.target.checked));
   $('set-highways').addEventListener('change', (e) => changeSetting('avoidHighways', e.target.checked));
+  $('set-moto').addEventListener('change', (e) => changeSetting('motorcycle', e.target.checked));
   $('set-voice-test').addEventListener('click', () => {
     voice.unlock();
     voice.say([{ text: t('voiceTest'), priority: 2 }], { force: true });
@@ -1736,6 +1735,7 @@ function bindUi() {
     const action = e.target.dataset.action;
     if (action === 'avoid-tolls') changeSetting('avoidTolls', e.target.checked);
     if (action === 'avoid-highways') changeSetting('avoidHighways', e.target.checked);
+    if (action === 'motorcycle') changeSetting('motorcycle', e.target.checked);
   });
   document.querySelector('.grab').addEventListener('click', () => {
     if (Date.now() - (state.swipedAt || 0) < 400 || state.mode !== 'home') return;

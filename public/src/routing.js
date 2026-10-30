@@ -16,14 +16,18 @@ async function getJson(url, init) {
   return res.json();
 }
 
-function valhalla(from, to, { avoidTolls, avoidHighways, heading, via, signal }) {
+function costing({ avoidTolls, avoidHighways, motorcycle }) {
+  const mode = motorcycle ? 'motorcycle' : 'auto';
+  return { costing: mode, costing_options: { [mode]: { use_tolls: avoidTolls ? 0 : 0.5, use_highways: avoidHighways ? 0 : 1 } } };
+}
+
+function valhalla(from, to, { avoidTolls, avoidHighways, heading, via, motorcycle, signal }) {
   const origin = { lon: from[0], lat: from[1] };
   if (Number.isFinite(heading)) Object.assign(origin, { heading: Math.round(heading), heading_tolerance: 60 });
   const stop = via ? [{ lon: via[0], lat: via[1], type: 'break' }] : [];
   const body = {
     locations: [origin, ...stop, { lon: to[0], lat: to[1] }],
-    costing: 'auto',
-    costing_options: { auto: { use_tolls: avoidTolls ? 0 : 0.5, use_highways: avoidHighways ? 0 : 1 } },
+    ...costing({ avoidTolls, avoidHighways, motorcycle }),
     alternates: 2,
     units: 'kilometers',
   };
@@ -46,9 +50,9 @@ function tomtom(from, to, { avoidTolls, avoidHighways, heading, via, signal }) {
 
 export async function planRoutes(from, to, options = {}) {
   const attempts = [];
-  if (options.liveTraffic) attempts.push(async () => fromTomTom(await tomtom(from, to, options)));
+  if (options.liveTraffic && !options.motorcycle) attempts.push(async () => fromTomTom(await tomtom(from, to, options)));
   attempts.push(async () => fromValhalla(await valhalla(from, to, options)));
-  attempts.push(async () => fromOsrm(await osrm(from, to, options)));
+  if (!options.motorcycle) attempts.push(async () => fromOsrm(await osrm(from, to, options)));
   let lastError = null;
   for (const attempt of attempts) {
     try {
@@ -82,7 +86,7 @@ export function pickFaster({ current, better }) {
   return saving >= FASTER_MIN_SAVING && saving >= current.duration * FASTER_MIN_SHARE ? { route: best, saving } : null;
 }
 
-export async function detourTimes(here, places, route, { avoidTolls, avoidHighways, heading, signal } = {}) {
+export async function detourTimes(here, places, route, { avoidTolls, avoidHighways, motorcycle, heading, signal } = {}) {
   const origin = { lon: here[0], lat: here[1] };
   if (Number.isFinite(heading)) Object.assign(origin, { heading: Math.round(heading), heading_tolerance: 60 });
   const stops = places.map((p) => ({ lon: p.lon, lat: p.lat }));
@@ -94,7 +98,7 @@ export async function detourTimes(here, places, route, { avoidTolls, avoidHighwa
     const json = await getJson(`${VALHALLA}/sources_to_targets`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ sources, targets, costing: 'auto', costing_options: { auto: { use_tolls: avoidTolls ? 0 : 0.5, use_highways: avoidHighways ? 0 : 1 } } }),
+      body: JSON.stringify({ sources, targets, ...costing({ avoidTolls, avoidHighways, motorcycle }) }),
       signal,
     });
     return json.sources_to_targets || [];
