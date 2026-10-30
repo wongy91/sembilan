@@ -29,6 +29,7 @@ const file = join(work, 'places.json');
 duckdb(`COPY (
   SELECT names.primary AS name,
          coalesce(addresses[1].locality, '') AS locality,
+         coalesce(addresses[1].freeform, '') AS street,
          coalesce(basic_category, '') AS category,
          round((bbox.xmin + bbox.xmax) / 2, 5) AS lon,
          round((bbox.ymin + bbox.ymax) / 2, 5) AS lat

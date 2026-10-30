@@ -13,6 +13,8 @@ const PLACES = [
   { name: "McDonald's Melaka", locality: 'Melaka', category: 'fast_food_restaurant', lon: 102.25, lat: 2.19 },
   { name: 'ZUS Coffee', locality: 'Cheras', category: 'cafe', lon: 101.74, lat: 3.08 },
   { name: 'ZUS Coffee', locality: 'Bangsar', category: 'cafe', lon: 101.67, lat: 3.13 },
+  { name: 'Bubble Gum Wax', locality: 'Petaling', category: 'beauty_salon', street: 'No 1-21, Residensi Park, Persiaran Jalil Utama', lon: 101.67312, lat: 3.05233 },
+  { name: 'Bubble Gum Wax', locality: 'Kuala Lumpur', category: 'beauty_salon', street: '54, Jalan Maarof, Kuala Lumpur', lon: 101.67232, lat: 3.13211 },
   { name: 'Cheras Leisure Mall', locality: 'Cheras', category: 'shopping_mall', lon: 101.745, lat: 3.085 },
   { name: 'Kedai Kopi Cheras', locality: 'Cheras', category: 'cafe', lon: 101.746, lat: 3.086 },
   { name: 'Kedai Runcit Ali', locality: 'Kajang', category: 'grocery', lon: 101.79, lat: 2.99 },
@@ -75,4 +77,17 @@ test('the Worker serves /api/places from the static index', async () => {
   assert.equal((await call('/api/health').then((r) => r.json())).places, true);
   assert.equal((await call('/api/places?q=x&lat=3.09&lon=101.68')).status, 400);
   assert.equal((await call('/api/places?q=klcc&lat=51.5&lon=-0.1')).status, 400);
+});
+
+test('a branch shows its street, so branches with the same name can be told apart', async () => {
+  const { manifest, load } = index();
+  const results = await searchIndex(manifest, load, 'bubble gum wax', BLOOMSVALE);
+  assert.deepEqual(
+    results.map((p) => [p.sub, p.category]),
+    [
+      ['No 1-21, Residensi Park, Persiaran Jalil Utama, Petaling', ''],
+      ['54, Jalan Maarof, Kuala Lumpur', ''],
+    ],
+    'nearest first; the town is not repeated when the street already names it; no category next to a street',
+  );
 });
