@@ -4,6 +4,12 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.17.3] - 2026-10-30
+
+### Fixed
+
+- Tapping search while driving opened a blank screen. It now lists your Home, Work, saved places and recent places, as the home screen does. Tap one to drive there.
+
 ## [0.17.2] - 2026-10-30
 
 ### Fixed
@@ -258,7 +264,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.17.2...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.17.3...HEAD
+[0.17.3]: https://github.com/wongy91/sembilan/compare/0.17.2...0.17.3
 [0.17.2]: https://github.com/wongy91/sembilan/compare/0.17.1...0.17.2
 [0.17.1]: https://github.com/wongy91/sembilan/compare/0.17.0...0.17.1
 [0.17.0]: https://github.com/wongy91/sembilan/compare/0.16.0...0.17.0
