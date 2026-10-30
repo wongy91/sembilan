@@ -215,6 +215,7 @@ export class MapView {
     this.user = new maplibregl.Marker({ element: el('div', 'puck', UI.dot), rotationAlignment: 'map', pitchAlignment: 'map' });
     this.car = false;
     this.pin = new maplibregl.Marker({ element: el('div', 'pin', UI.pin), anchor: 'bottom' });
+    this.stopPin = new maplibregl.Marker({ element: el('div', 'pin stop-pin', UI.pin), anchor: 'bottom' });
     const zoomClass = () => container.classList.toggle('zoomed-out', this.map.getZoom() < 10);
     this.map.on('zoomend', zoomClass);
     this.map.once('load', zoomClass);
@@ -502,6 +503,11 @@ export class MapView {
   showPin(lonLat) {
     if (lonLat) this.pin.setLngLat(lonLat).addTo(this.map);
     else this.pin.remove();
+  }
+
+  showStop(lonLat) {
+    if (lonLat) this.stopPin.setLngLat(lonLat).addTo(this.map);
+    else this.stopPin.remove();
   }
 
   driveTo(lonLat, heading, speed) {

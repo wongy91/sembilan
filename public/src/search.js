@@ -1,4 +1,4 @@
-import { haversine } from './geo.js';
+import { haversine, slice, thin } from './geo.js';
 import { tokenize } from './text.js';
 
 const PHOTON = 'https://photon.komoot.io';
@@ -10,6 +10,8 @@ const OSM_NEARBY = {
   ev: ['charging station', 'amenity:charging_station'],
 };
 const NEARBY_LIMIT_M = 30000;
+const AHEAD_M = 100000;
+const AHEAD_POINTS = 400;
 const BBOX = '99.5,0.8,119.5,7.5';
 const COORD = /^\s*(-?\d{1,2}(?:\.\d+)?)\s*[,\s]\s*(-?\d{1,3}(?:\.\d+)?)\s*$/;
 
@@ -147,6 +149,15 @@ export async function nearbyPlaces(cat, { near, signal, tomtom = false, label = 
       .filter((p) => p.dist <= NEARBY_LIMIT_M)
       .sort((a, b) => a.dist - b.dist),
   );
+}
+
+export async function placesAhead(cat, route, along, { signal } = {}) {
+  const span = Math.min(route.distance, along + AHEAD_M) - along;
+  const points = thin(slice(route.coords, route.cum, along, along + AHEAD_M), Math.max(50, span / AHEAD_POINTS)).map(([lon, lat]) => [+lon.toFixed(5), +lat.toFixed(5)]);
+  const res = await fetch('/api/along', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ cat, points }), signal });
+  if (!res.ok) throw new Error(`along ${res.status}`);
+  const places = ((await res.json()).results || []).map(({ offset, ...p }) => ({ ...p, dist: offset }));
+  return withBranchNames(places.sort((a, b) => a.dist - b.dist));
 }
 
 async function photonSearch(query, { near, lang, signal }) {

@@ -6,6 +6,8 @@ const PHRASES = {
     departRoad: 'Menuju ke {dir} di {road}',
     arrive: 'Anda telah tiba di destinasi',
     arriveSide: { left: 'Destinasi anda di sebelah kiri', right: 'Destinasi anda di sebelah kanan' },
+    stop: 'Anda telah tiba di hentian',
+    stopSide: { left: 'Hentian anda di sebelah kiri', right: 'Hentian anda di sebelah kanan' },
     turn: {
       left: 'Belok kiri',
       right: 'Belok kanan',
@@ -44,6 +46,8 @@ const PHRASES = {
     departRoad: 'Head {dir} on {road}',
     arrive: 'You have arrived at your destination',
     arriveSide: { left: 'Your destination is on the left', right: 'Your destination is on the right' },
+    stop: 'You have reached your stop',
+    stopSide: { left: 'Your stop is on the left', right: 'Your stop is on the right' },
     turn: {
       left: 'Turn left',
       right: 'Turn right',
@@ -82,6 +86,8 @@ const PHRASES = {
     departRoad: '沿 {road} 向{dir}行驶',
     arrive: '您已到达目的地',
     arriveSide: { left: '目的地在左侧', right: '目的地在右侧' },
+    stop: '您已到达经停点',
+    stopSide: { left: '经停点在左侧', right: '经停点在右侧' },
     turn: {
       left: '左转',
       right: '右转',
@@ -167,6 +173,8 @@ export function instruction(step, lang = 'ms', { spoken = false } = {}) {
     }
     case 'arrive':
       return step.side && P.arriveSide[step.side] ? P.arriveSide[step.side] : P.arrive;
+    case 'waypoint':
+      return step.side && P.stopSide[step.side] ? P.stopSide[step.side] : P.stop;
     case 'turn': {
       const base = P.turn[step.modifier] || P.turn.straight;
       return road ? fill(P.onto, { base, road }) : base;
@@ -242,6 +250,7 @@ export function maneuverIcon(step) {
   const side = sideKey(step.modifier);
   switch (step.kind) {
     case 'arrive':
+    case 'waypoint':
       return 'arrive';
     case 'roundabout':
     case 'roundabout-exit':

@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isAddressLike, mergePlaces, nameBranches, nearbyPlaces, searchPlaces } from '../public/src/search.js';
+import { cumulative } from '../public/src/geo.js';
+import { isAddressLike, mergePlaces, nameBranches, nearbyPlaces, placesAhead, searchPlaces } from '../public/src/search.js';
 
 const NEAR = [101.6806, 3.0905];
 const photon = (names) => ({ features: names.map((name, i) => ({ properties: { name, city: 'Kuala Lumpur' }, geometry: { coordinates: [101.68 + i / 100, 3.09] } })) });
@@ -148,4 +149,30 @@ test('branches of one chain come nearest first, with their neighbourhood; other 
     'Bubble Gum Wax 17.7 km',
     'Bubble Gum Wax Puchong 8.5 km',
   ]);
+});
+
+test('petrol on your route: sends the road ahead of you, and lists stations in the order you reach them', async () => {
+  const coords = Array.from({ length: 2001 }, (_, i) => [101.6845, +(3.0 + i * 0.0001).toFixed(4)]);
+  const route = { coords, cum: cumulative(coords) };
+  route.distance = route.cum.at(-1);
+  let sent;
+  const { result } = await withFetch(
+    (url, init) => {
+      if (url.includes('data/areas.json')) return json({ areas: AREAS });
+      sent = JSON.parse(init.body);
+      return json({
+        results: [
+          { name: 'Petronas', sub: 'Jalan Klang Lama', lon: 101.6858, lat: 3.0896, detour: 120, offset: 9000 },
+          { name: 'Shell', sub: 'Jalan Kuchai Lama', lon: 101.6731, lat: 3.056, detour: 30, offset: 1500 },
+          { name: 'Petronas', sub: 'Jalan Jalil', lon: 101.6731, lat: 3.056, detour: 300, offset: 4000 },
+        ],
+      });
+    },
+    () => placesAhead('fuel', route, 5000, {}),
+  );
+  assert.equal(sent.cat, 'fuel');
+  assert.ok(Math.abs(sent.points[0][1] - 3.045) < 0.0002, 'starts where you are, not where the trip began');
+  assert.ok(sent.points.length >= 2 && sent.points.length <= 401);
+  assert.deepEqual(result.map((p) => [p.name, p.dist]), [['Shell', 1500], ['Petronas (Bukit Jalil)', 4000], ['Petronas (Kuchai Lama)', 9000]]);
+  assert.equal(result[0].detour, 30);
 });

@@ -1,7 +1,7 @@
 import { reportError } from './errors.js';
 import { KL, MapView, SIGNAL_ZOOM } from './map.js';
 import { fmtAgo, fmtClock, fmtDistance, fmtDuration, getLang, setLang, t } from './i18n.js';
-import { nearbyPlaces, reversePlace, searchPlaces } from './search.js';
+import { nearbyPlaces, placesAhead, reversePlace, searchPlaces } from './search.js';
 import { fasterRoute, loadLanes, pickFaster, planRoutes } from './routing.js';
 import { Navigator, SPEEDING_MARGIN, timeLeft } from './navigator.js';
 import { bannerOf, maneuverIcon, roadName } from './instructions.js';
@@ -97,6 +97,7 @@ const PARKING_DEST = /park|letak kereta|停车/i;
 const COMMUTE_TTL = 10 * 60000;
 const COMMUTE_HERE = 300;
 const COMMUTE_ACCURACY = 1000;
+const STOP_REACHED = 50;
 
 const map = createMap();
 window.sembilan = { map, state, checkTraffic: () => state.nav && checkTraffic(state.nav) };
@@ -115,8 +116,9 @@ function createMap() {
       },
       onRouteClick: selectRoute,
       onStationClick: ({ name, lon, lat, kind }) => {
-        if (state.mode !== 'home' && state.mode !== 'place') return;
         const sub = t(kind === 'fuel' ? 'catFuel' : 'catEv');
+        if (state.mode === 'nav' && !state.nav?.alts) return openStopMenu({ name: name || sub, sub, lon, lat });
+        if (state.mode !== 'home' && state.mode !== 'place') return;
         selectPlace({ name: name || sub, sub, lon, lat });
       },
       onReportClick: showReportPopup,
@@ -515,12 +517,7 @@ async function openAlternatives() {
   if (!$('nav-more').hidden) toggleMore();
   render();
   try {
-    const routes = await planRoutes([fix.lon, fix.lat], [nav.dest.lon, nav.dest.lat], {
-      avoidTolls: settings.avoidTolls,
-      avoidHighways: settings.avoidHighways,
-      heading: fix.heading,
-      liveTraffic: state.backend.traffic,
-    });
+    const routes = await planRoutes([fix.lon, fix.lat], [nav.dest.lon, nav.dest.lat], driveOptions(nav, fix));
     if (nav.alts !== alts) return;
     const others = routes
       .filter((r) => !followsRoute(r, route, progress.along))
@@ -597,6 +594,7 @@ function navSheet() {
       </div>
       <button class="btn end-trip" data-action="end">${UI.close}<span>${esc(t('endTrip'))}</span></button>
     </div>
+    <div id="nav-stop" class="nav-stop" hidden>${UI.pin}<span id="nav-stop-text"></span><button class="icon-btn" type="button" data-action="remove-stop" aria-label="${esc(t('removeStop'))}">${UI.close}</button></div>
     <div id="nav-next" class="next-poi"></div>`;
 }
 
@@ -685,20 +683,35 @@ async function runSearch(query) {
 
 const CATEGORY_LABEL = { fuel: 'catFuel', food: 'catFood', parking: 'catParking', ev: 'catEv' };
 
+const detourText = (s) => (s == null ? '' : s < 60 ? t('noDetour') : t('detour', { m: Math.round(s / 60) }));
+
+async function stationsAhead(nav, signal) {
+  try {
+    const list = await placesAhead('fuel', nav.route, nav.navigator.progress().along, { signal });
+    return list.map((p) => ({ ...p, sub: [detourText(p.detour), p.sub].filter(Boolean).join(' · ') }));
+  } catch (err) {
+    if (signal.aborted) throw err;
+    return null;
+  }
+}
+
 async function runNearby(cat) {
   state.searchAbort?.abort();
   const ctrl = (state.searchAbort = new AbortController());
   const label = t(CATEGORY_LABEL[cat]);
-  $('q').value = label;
+  const onRoute = !!state.nav && cat === 'fuel' && state.backend.search;
+  $('q').value = onRoute ? t('onRoute', { cat: label }) : label;
   $('btn-clear').hidden = false;
   document.body.classList.add('searching');
   syncSlide();
   showResults([{ msg: t('searching') }]);
   try {
     const near = state.fix ? [state.fix.lon, state.fix.lat] : (map?.center() ?? KL);
-    const list = await nearbyPlaces(cat, { near, signal: ctrl.signal, tomtom: state.backend.search, label });
+    const ahead = onRoute ? await stationsAhead(state.nav, ctrl.signal) : null;
+    const list = ahead || (await nearbyPlaces(cat, { near, signal: ctrl.signal, tomtom: state.backend.search, label }));
     if (ctrl.signal.aborted) return;
-    showResults(list.length ? list : [{ msg: t('noResults') }]);
+    if (onRoute && !ahead) $('q').value = label;
+    showResults(list.length ? list : [{ msg: t(ahead ? 'noneAhead' : 'noResults') }]);
   } catch {
     if (!ctrl.signal.aborted) showResults([{ msg: t('searchFailed') }]);
   }
@@ -708,6 +721,11 @@ const routeKey = (place) => `${place.lon.toFixed(5)},${place.lat.toFixed(5)}|${+
 
 function routeOptions() {
   return { avoidTolls: settings.avoidTolls, avoidHighways: settings.avoidHighways, liveTraffic: state.backend.traffic };
+}
+
+function driveOptions(nav, fix) {
+  const via = nav.stop && !nav.stop.reached ? [nav.stop.lon, nav.stop.lat] : null;
+  return { ...routeOptions(), heading: fix.heading, via };
 }
 
 function prefetchRoutes(place) {
@@ -860,6 +878,7 @@ function startNav(simulated) {
   state.nav = {
     route,
     dest: state.place,
+    stop: null,
     basePois,
     pois: basePois,
     reports: [],
@@ -913,6 +932,7 @@ function finishNav(arrived) {
   clearInterval(nav.trafficTimer);
   clearOffer(nav);
   hideParking(nav);
+  map.showStop(null);
   releaseWakeLock();
   if (!arrived) voice.stop();
   state.nav = null;
@@ -982,6 +1002,12 @@ function updateNavSheet(progress, fix) {
   const left = remainingTime(state.nav, progress);
   eta.textContent = fmtClock(new Date(Date.now() + left * 1000));
   $('nav-left').textContent = `${fmtDuration(left)} · ${fmtDistance(progress.remaining)}`;
+  const stop = state.nav.stop;
+  $('nav-stop').hidden = !stop || stop.reached;
+  if (!$('nav-stop').hidden) {
+    const at = state.nav.route.steps.find((s) => s.kind === 'waypoint');
+    $('nav-stop-text').textContent = [stop.name, at && fmtDistance(Math.max(0, at.along - progress.along))].filter(Boolean).join(' · ');
+  }
   const ahead = state.nav.pois.filter((p) => p.along > progress.along);
   const rr = ahead.find((p) => p.kind === 'rr');
   const toll = ahead.find((p) => p.kind === 'toll');
@@ -1037,6 +1063,7 @@ function navTick(fix) {
   if (out.speeding) voice.chime(SPEEDING_TONES);
   out.alerts.forEach(showAlert);
   const progress = out.progress;
+  checkStop(nav, progress, fix);
   const position = progress.snapped || [fix.lon, fix.lat];
   map.driveTo(position, fix.heading, fix.speed ?? 0);
   if (!nav.lineAt || (performance.now() - nav.lineAt > 1000 && Math.abs(progress.along - nav.lineAlong) > 20)) drawNavRoutes(nav, progress.along);
@@ -1046,7 +1073,7 @@ function navTick(fix) {
   if (nav.calloutFor !== progress.nextIndex) {
     nav.calloutFor = progress.nextIndex;
     const next = progress.next;
-    map.setCallout(nav.route.coords[next.index], next.kind === 'arrive' ? '' : roadName(next) || next.toward?.[0] || '');
+    map.setCallout(nav.route.coords[next.index], next.kind === 'arrive' || next.kind === 'waypoint' ? '' : roadName(next) || next.toward?.[0] || '');
   }
   const road = roadName(nav.route.steps[progress.stepIndex]);
   $('road-pill').textContent = road;
@@ -1146,7 +1173,7 @@ async function checkTraffic(nav) {
     if (state.nav !== nav || nav.route !== route || !result.current) return;
     nav.fresh = { route: result.current, from: progress.along };
     const now = Date.now();
-    const quiet = nav.alts || !$('parking').hidden || now - nav.routeChangedAt < QUIET_AFTER_CHANGE || now - nav.declinedAt < QUIET_AFTER_DECLINE || result.current.duration < 600;
+    const quiet = nav.alts || (nav.stop && !nav.stop.reached) || !$('parking').hidden || now - nav.routeChangedAt < QUIET_AFTER_CHANGE || now - nav.declinedAt < QUIET_AFTER_DECLINE || result.current.duration < 600;
     const found = quiet ? null : pickFaster(result);
     if (found) offerFaster(nav, found);
   } catch {
@@ -1210,12 +1237,58 @@ async function changeDestination(place, parking = false) {
     }
     state.place = place;
     store.remember(settings, place);
+    nav.stop = null;
+    map.showStop(null);
     map.showPin([place.lon, place.lat]);
     useRoute(nav, route);
     toast(t('routesTo', { name: place.name }));
   } catch {
     if (state.nav === nav) toast(t('noRoute'));
   }
+}
+
+async function setStop(place) {
+  const nav = state.nav;
+  const fix = state.fix;
+  if (!nav || !fix) return;
+  const old = nav.stop;
+  toast(t('rerouting'));
+  try {
+    const [route] = await planRoutes([fix.lon, fix.lat], [nav.dest.lon, nav.dest.lat], { ...driveOptions(nav, fix), via: place && [place.lon, place.lat] });
+    if (state.nav !== nav || nav.stop !== old) return;
+    nav.stop = place && { ...place, reached: false };
+    map.showStop(place && [place.lon, place.lat]);
+    useRoute(nav, route);
+    toast(place ? t('stopAdded', { name: place.name }) : t('stopRemoved'));
+  } catch {
+    if (state.nav === nav) toast(t('noRoute'));
+  }
+}
+
+function checkStop(nav, progress, fix) {
+  const stop = nav.stop;
+  if (!stop || stop.reached) return;
+  const at = nav.route.steps.find((s) => s.kind === 'waypoint');
+  if ((at && progress.along >= at.along - 30) || haversine([fix.lon, fix.lat], [stop.lon, stop.lat]) <= STOP_REACHED) {
+    stop.reached = true;
+    map.showStop(null);
+  }
+}
+
+function openStopMenu(place) {
+  state.stopTarget = place;
+  $('stop-title').textContent = place.name;
+  $('stop-sub').textContent = place.sub;
+  $('dlg-stop').returnValue = '';
+  $('dlg-stop').showModal();
+}
+
+function closeStopMenu() {
+  const place = state.stopTarget;
+  state.stopTarget = null;
+  if (!place || !state.nav) return;
+  if ($('dlg-stop').returnValue === 'stop') setStop(place);
+  if ($('dlg-stop').returnValue === 'dest') changeDestination(place);
 }
 
 async function reroute(fix) {
@@ -1228,12 +1301,7 @@ async function reroute(fix) {
   nav.lastReroute = Date.now();
   toast(t('rerouting'));
   try {
-    const [route] = await planRoutes([fix.lon, fix.lat], [nav.dest.lon, nav.dest.lat], {
-      avoidTolls: settings.avoidTolls,
-      avoidHighways: settings.avoidHighways,
-      heading: fix.heading,
-      liveTraffic: state.backend.traffic,
-    });
+    const [route] = await planRoutes([fix.lon, fix.lat], [nav.dest.lon, nav.dest.lat], driveOptions(nav, fix));
     if (state.nav !== nav) return;
     useRoute(nav, route);
   } catch {
@@ -1523,7 +1591,7 @@ function bindUi() {
     const place = $('results').items[Number(button.dataset.i)];
     if (!state.nav) return selectPlace(place);
     endSearch();
-    changeDestination(place);
+    openStopMenu(place);
   });
   $('btn-clear').addEventListener('click', () => {
     $('q').value = '';
@@ -1574,6 +1642,8 @@ function bindUi() {
   $('save-cancel').addEventListener('click', () => $('dlg-save').close(''));
   $('dlg-recent').addEventListener('close', closeRecentMenu);
   $('recent-cancel').addEventListener('click', () => $('dlg-recent').close(''));
+  $('dlg-stop').addEventListener('close', closeStopMenu);
+  $('stop-cancel').addEventListener('click', () => $('dlg-stop').close(''));
 
   $('btn-locate').addEventListener('click', () => {
     if (state.nav) {
@@ -1698,6 +1768,8 @@ function bindUi() {
         return startNav(true);
       case 'end':
         return finishNav(false);
+      case 'remove-stop':
+        return setStop(null);
       case 'mute':
         return toggleVoice();
       case 'nav-search':

@@ -15,11 +15,12 @@ async function getJson(url, init) {
   return res.json();
 }
 
-function valhalla(from, to, { avoidTolls, avoidHighways, heading, signal }) {
+function valhalla(from, to, { avoidTolls, avoidHighways, heading, via, signal }) {
   const origin = { lon: from[0], lat: from[1] };
   if (Number.isFinite(heading)) Object.assign(origin, { heading: Math.round(heading), heading_tolerance: 60 });
+  const stop = via ? [{ lon: via[0], lat: via[1], type: 'break' }] : [];
   const body = {
-    locations: [origin, { lon: to[0], lat: to[1] }],
+    locations: [origin, ...stop, { lon: to[0], lat: to[1] }],
     costing: 'auto',
     costing_options: { auto: { use_tolls: avoidTolls ? 0 : 0.5, use_highways: avoidHighways ? 0 : 1 } },
     alternates: 2,
@@ -28,16 +29,16 @@ function valhalla(from, to, { avoidTolls, avoidHighways, heading, signal }) {
   return getJson(`${VALHALLA}/route`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal });
 }
 
-function osrm(from, to, { signal }) {
-  const path = `${from[0]},${from[1]};${to[0]},${to[1]}`;
+function osrm(from, to, { via, signal }) {
+  const path = [from, via, to].filter(Boolean).map(([lon, lat]) => `${lon},${lat}`).join(';');
   return getJson(`${OSRM}/${path}?overview=full&geometries=polyline6&steps=true&alternatives=true`, { signal });
 }
 
-function tomtom(from, to, { avoidTolls, avoidHighways, heading, signal }) {
+function tomtom(from, to, { avoidTolls, avoidHighways, heading, via, signal }) {
   return getJson('/api/route', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ from, to, avoidTolls, avoidHighways, heading: Number.isFinite(heading) ? heading : null }),
+    body: JSON.stringify({ from, via: via || null, to, avoidTolls, avoidHighways, heading: Number.isFinite(heading) ? heading : null }),
     signal,
   });
 }

@@ -132,16 +132,17 @@ function valhallaTrip(trip) {
     const base = coords.length ? coords.length - 1 : 0;
     for (let i = coords.length ? 1 : 0; i < shape.length; i++) coords.push(shape[i]);
     for (const m of leg.maneuvers || []) {
-      const [kind, modifier = null] = VALHALLA[m.type] || ['continue', 'straight'];
+      let [kind, modifier = null] = VALHALLA[m.type] || ['continue', 'straight'];
       if (kind === 'depart' && li > 0) continue;
-      if (kind === 'arrive' && li < legs.length - 1) continue;
+      if (kind === 'arrive' && li < legs.length - 1) kind = 'waypoint';
+      const end = kind === 'arrive' || kind === 'waypoint';
       const sign = m.sign || {};
       const { names, refs } = splitNames(m.street_names?.length ? m.street_names : m.begin_street_names);
       const branch = signTexts(sign.exit_branch_elements).filter((s) => REF.test(s));
       steps.push(step({
         kind,
-        modifier: kind === 'arrive' ? null : modifier,
-        side: kind === 'arrive' ? modifier : null,
+        modifier: end ? null : modifier,
+        side: end ? modifier : null,
         names,
         refs: refs.length ? refs : branch,
         toward: signTexts(sign.exit_toward_elements).filter((s) => !REF.test(s)).slice(0, 3),
@@ -234,19 +235,23 @@ function osrmRoute(r) {
   const cum = cumulative(coords);
   const steps = [];
   let cursor = 0;
-  for (const leg of r.legs || []) {
+  const legs = r.legs || [];
+  for (const [li, leg] of legs.entries()) {
     for (const s of leg.steps || []) {
       const m = s.maneuver || {};
       const mod = OSRM_MOD[m.modifier] || 'straight';
-      const kind = osrmKind(m.type, mod);
+      let kind = osrmKind(m.type, mod);
+      if (kind === 'depart' && li > 0) continue;
+      if (kind === 'arrive' && li < legs.length - 1) kind = 'waypoint';
+      const end = kind === 'arrive' || kind === 'waypoint';
       const hit = locate(coords, cum, m.location, cursor, cursor + 5000);
       cursor = hit.index;
       const dest = String(s.destinations || '');
       const towardPart = dest.includes(':') ? dest.slice(dest.indexOf(':') + 1) : dest;
       steps.push(step({
         kind,
-        modifier: kind === 'arrive' || kind === 'uturn' ? null : mod,
-        side: kind === 'arrive' && mod !== 'straight' ? (mod.includes('left') ? 'left' : 'right') : null,
+        modifier: end || kind === 'uturn' ? null : mod,
+        side: end && mod !== 'straight' ? (mod.includes('left') ? 'left' : 'right') : null,
         ...splitNames([s.name, s.ref]),
         toward: towardPart.split(/,\s*/).map((x) => x.trim()).filter((x) => x && !REF.test(x)).slice(0, 3),
         exitNumber: s.exits ? String(s.exits).split(/;\s*/)[0] : null,
@@ -281,7 +286,7 @@ const TOMTOM = {
   ROUNDABOUT_CROSS: ['roundabout'], ROUNDABOUT_RIGHT: ['roundabout'], ROUNDABOUT_LEFT: ['roundabout'], ROUNDABOUT_BACK: ['roundabout'],
   SWITCH_PARALLEL_ROAD: ['keep', 'straight'], SWITCH_MAIN_ROAD: ['keep', 'straight'],
   ENTRANCE_RAMP: ['ramp'],
-  WAYPOINT_LEFT: ['continue', 'straight'], WAYPOINT_RIGHT: ['continue', 'straight'], WAYPOINT_REACHED: ['continue', 'straight'],
+  WAYPOINT_LEFT: ['waypoint', 'left'], WAYPOINT_RIGHT: ['waypoint', 'right'], WAYPOINT_REACHED: ['waypoint'],
 };
 
 function tomtomRoute(r) {
@@ -293,11 +298,12 @@ function tomtomRoute(r) {
   const ins = r.guidance?.instructions || [];
   const steps = ins.map((x, i) => {
     const [kind, modifier = null] = TOMTOM[x.maneuver] || ['continue', 'straight'];
+    const end = kind === 'arrive' || kind === 'waypoint';
     const next = ins[i + 1];
     return step({
       kind,
-      modifier: kind === 'arrive' ? null : modifier,
-      side: kind === 'arrive' ? modifier : null,
+      modifier: end ? null : modifier,
+      side: end ? modifier : null,
       ...splitNames([x.street, ...(x.roadNumbers || [])]),
       toward: x.signpostText ? x.signpostText.split(/\s*[,/]\s*/).filter((s) => s && !REF.test(s)).slice(0, 3) : [],
       exitNumber: x.exitNumber || null,
