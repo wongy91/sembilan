@@ -560,6 +560,19 @@ body[data-mode='nav'] .grab {
   text-align: left;
 }
 
+#results .has-menu {
+  display: flex;
+  align-items: center;
+}
+
+#results .icon-btn {
+  flex: none;
+  justify-content: center;
+  width: 44px;
+  padding: 0;
+  color: var(--muted);
+}
+
 #results button > span {
   display: flex;
   flex-direction: column;

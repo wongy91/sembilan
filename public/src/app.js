@@ -620,7 +620,7 @@ function showResults(items) {
     .map((p, i) =>
       p.msg
         ? `<li class="msg">${esc(p.msg)}</li>`
-        : `<li><button type="button" data-i="${i}"><span><b>${p.local ? `${{ home: '🏠', work: '💼', saved: '⭐' }[p.tag] || '🕘'} ` : ''}${esc(p.name)}</b><small>${esc(p.sub)}</small></span>${Number.isFinite(p.dist) ? `<em>${esc(fmtDistance(p.dist))}</em>` : ''}</button></li>`,
+        : `<li${p.local && !p.tag ? ' class="has-menu"' : ''}><button type="button" data-i="${i}"><span><b>${p.local ? `${{ home: '🏠', work: '💼', saved: '⭐' }[p.tag] || '🕘'} ` : ''}${esc(p.name)}</b><small>${esc(p.sub)}</small></span>${Number.isFinite(p.dist) ? `<em>${esc(fmtDistance(p.dist))}</em>` : ''}</button>${p.local && !p.tag ? `<button class="icon-btn" type="button" data-menu="${i}" aria-label="${esc(t('more'))}">${UI.more}</button>` : ''}</li>`,
     )
     .join('');
   ul.hidden = false;
@@ -1425,6 +1425,7 @@ function closeRecentMenu() {
   store.forget(settings, place);
   toast(t('recentRemoved'));
   render();
+  if (document.body.classList.contains('searching')) $('q').dispatchEvent(new Event('input'));
 }
 
 function loadSignals() {
@@ -1510,6 +1511,8 @@ function bindUi() {
     if (query) runSearch(query);
   });
   $('results').addEventListener('click', (e) => {
+    const menu = e.target.closest('button[data-menu]');
+    if (menu) return openRecentMenu($('results').items[Number(menu.dataset.menu)]);
     const button = e.target.closest('button[data-i]');
     if (!button) return;
     const place = $('results').items[Number(button.dataset.i)];
