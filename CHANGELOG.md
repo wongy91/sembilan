@@ -4,6 +4,12 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-10-30
+
+### Added
+
+- **Petrol stations on the map**: from street-level zoom, every petrol station shows as a pump icon with its brand underneath: Petronas, Shell, Petron, BHPetrol or Caltex. Tap one on the home screen to get directions. The stations come with the map itself, so there's nothing extra to download and they still show offline along a saved route.
+
 ## [0.18.1] - 2026-10-30
 
 ### Fixed
@@ -276,7 +282,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.18.1...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.19.0...HEAD
+[0.19.0]: https://github.com/wongy91/sembilan/compare/0.18.1...0.19.0
 [0.18.1]: https://github.com/wongy91/sembilan/compare/0.18.0...0.18.1
 [0.18.0]: https://github.com/wongy91/sembilan/compare/0.17.3...0.18.0
 [0.17.3]: https://github.com/wongy91/sembilan/compare/0.17.2...0.17.3
