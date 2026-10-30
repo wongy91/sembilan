@@ -4,6 +4,12 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.15.1] - 2026-10-30
+
+### Fixed
+
+- Changing route while stopped looked broken: after **Go** in **Routes** (or **Switch** on a faster route), the map kept the old route and the arrival time showed "–" until the phone sent a new GPS position, which can take a while at a standstill. The new route, its instructions and the arrival time now appear straight away. The alternatives in **Routes** and a faster-route suggestion are also drawn on the map as soon as they arrive, instead of after the next GPS position.
+
 ## [0.15.0] - 2026-10-30
 
 ### Added
@@ -208,7 +214,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.15.0...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.15.1...HEAD
+[0.15.1]: https://github.com/wongy91/sembilan/compare/0.15.0...0.15.1
 [0.15.0]: https://github.com/wongy91/sembilan/compare/0.14.1...0.15.0
 [0.14.1]: https://github.com/wongy91/sembilan/compare/0.14.0...0.14.1
 [0.14.0]: https://github.com/wongy91/sembilan/compare/0.13.0...0.14.0
