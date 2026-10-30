@@ -4,6 +4,12 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-10-31
+
+### Added
+
+- **Motorcycle mode**: turn on 🏍️ **Motorcycle** on the routes screen or in Settings, and routes avoid roads closed to motorcycles, like the SMART Tunnel (Kuchai Lama → KLCC goes via SPE and AKLEH instead, 15 km, about 1 minute longer). Motorcycle routes come from OpenStreetMap through Valhalla, so they don't use live traffic, don't show car toll fares and don't offer faster routes while you ride. A road only counts as closed if OpenStreetMap marks it so.
+
 ## [0.23.0] - 2026-10-31
 
 ### Changed
@@ -318,7 +324,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.23.0...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.24.0...HEAD
+[0.24.0]: https://github.com/wongy91/sembilan/compare/0.23.0...0.24.0
 [0.23.0]: https://github.com/wongy91/sembilan/compare/0.22.1...0.23.0
 [0.22.1]: https://github.com/wongy91/sembilan/compare/0.22.0...0.22.1
 [0.22.0]: https://github.com/wongy91/sembilan/compare/0.21.0...0.22.0
