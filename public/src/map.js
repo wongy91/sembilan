@@ -7,6 +7,7 @@ const STYLES = {
   night: 'https://tiles.openfreemap.org/styles/dark',
 };
 export const KL = [101.6869, 3.139];
+export const SIGNAL_ZOOM = 15.5;
 const EMPTY = { type: 'FeatureCollection', features: [] };
 const LINE = { 'line-cap': 'round', 'line-join': 'round' };
 const ROUTE_WIDTH = [[8, 3], [12, 4.5], [15, 7], [18, 12], [20, 18]];
@@ -16,6 +17,12 @@ const width = (scale = 1, extra = 0) => [
   ['zoom'],
   ...ROUTE_WIDTH.flatMap(([zoom, w]) => [zoom, Math.round((w * scale + extra) * 10) / 10]),
 ];
+const FLOW_CLOSED = ['any', ['has', 'road_closure'], ['<', ['get', 'traffic_level'], 0.15]];
+const FLOW_SLOW = ['any', ['has', 'road_closure'], ['<', ['get', 'traffic_level'], 0.75]];
+const FLOW_COLOR = ['case', FLOW_CLOSED, '#7a271a', ['<', ['get', 'traffic_level'], 0.35], '#d92d20', '#f79009'];
+const FLOW_WIDTH = ['interpolate', ['linear'], ['zoom'], 8, 1.5, 12, 2.5, 15, 4, 18, 7];
+const FLOW_SIDE = ['case', ['!=', ['get', 'traffic_road_coverage'], 'one_side'], 0, ['has', 'left_hand_traffic'], -1, 1];
+const FLOW_OFFSET = ['interpolate', ['linear'], ['zoom'], 8, ['*', FLOW_SIDE, 1], 12, ['*', FLOW_SIDE, 1.5], 15, ['*', FLOW_SIDE, 2.5], 18, ['*', FLOW_SIDE, 4.5]];
 const ROUTE_COLORS = {
   day: { glow: '#1aa0ff', casing: '#0a5ec2', main: '#1aa0ff', alt: '#9aa8ba' },
   night: { glow: '#2fb4ff', casing: '#e3f3ff', main: '#2fb4ff', alt: '#5d6f8f' },
@@ -93,6 +100,27 @@ function overlayAnchor(style) {
   return layers.find((l, i) => i > lastBase && l.type === 'symbol')?.id;
 }
 
+function signalIcon() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 20;
+  canvas.height = 44;
+  const g = canvas.getContext('2d');
+  g.fillStyle = '#2b2f36';
+  g.strokeStyle = '#fff';
+  g.lineWidth = 2;
+  g.beginPath();
+  g.roundRect(1, 1, 18, 42, 6);
+  g.fill();
+  g.stroke();
+  for (const [color, y] of [['#f04438', 11], ['#fdb022', 22], ['#12b76a', 33]]) {
+    g.fillStyle = color;
+    g.beginPath();
+    g.arc(10, y, 4.5, 0, Math.PI * 2);
+    g.fill();
+  }
+  return g.getImageData(0, 0, 20, 44);
+}
+
 function el(tag, className, html = '') {
   const node = document.createElement(tag);
   node.className = className;
@@ -109,6 +137,7 @@ export class MapView {
     this.handlers = handlers;
     this.data = { routes: EMPTY, toll: EMPTY, traffic: EMPTY };
     this.trafficOn = false;
+    this.styled = false;
     this.poiMarkers = [];
     this.reportMarkers = [];
     this.lastLongPress = 0;
@@ -238,37 +267,62 @@ export class MapView {
     add({ id: 'sb-routes-main', type: 'line', source: 'sb-routes', filter: selected, layout: LINE, paint: { 'line-color': c.main, 'line-width': width() } });
     add({ id: 'sb-traffic', type: 'line', source: 'sb-traffic', layout: LINE, paint: { 'line-color': ['match', ['get', 'level'], 1, '#f79009', 2, '#e8590c', 3, '#d92d20', '#7a271a'], 'line-width': width() } });
     add({ id: 'sb-toll', type: 'line', source: 'sb-toll', layout: LINE, paint: { 'line-color': '#ffcc00', 'line-width': width(0.3), 'line-dasharray': [1, 2] } });
+    this.addSignals(before);
     this.apply3D();
+    this.styled = true;
+  }
+
+  setSignals(flat) {
+    const features = [];
+    for (let i = 0; i < flat.length; i += 2) features.push({ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [flat[i], flat[i + 1]] } });
+    this.signals = { type: 'FeatureCollection', features };
+    if (this.styled) this.addSignals(overlayAnchor(this.map.getStyle()));
+  }
+
+  addSignals(before) {
+    const m = this.map;
+    if (!this.signals) return;
+    if (!m.hasImage('sb-signal')) m.addImage('sb-signal', signalIcon(), { pixelRatio: 2 });
+    if (!m.getSource('sb-signals')) m.addSource('sb-signals', { type: 'geojson', data: this.signals });
+    if (!m.getLayer('sb-signals')) {
+      m.addLayer(
+        { id: 'sb-signals', type: 'symbol', source: 'sb-signals', minzoom: SIGNAL_ZOOM, layout: { 'icon-image': 'sb-signal', 'icon-size': ['interpolate', ['linear'], ['zoom'], SIGNAL_ZOOM, 0.75, 18, 1.1], 'icon-padding': 0 } },
+        before,
+      );
+    }
   }
 
   addTrafficLayer(before) {
     const m = this.map;
-    if (!m.getSource('sb-traffic-tiles')) {
-      m.addSource('sb-traffic-tiles', {
-        type: 'raster',
-        tiles: [`${location.origin}/api/traffic/{z}/{x}/{y}.png`],
-        tileSize: 256,
-        minzoom: 5,
-        maxzoom: 18,
+    if (!m.getSource('sb-flow')) {
+      m.addSource('sb-flow', {
+        type: 'vector',
+        tiles: [`${location.origin}/api/traffic/{z}/{x}/{y}.pbf`],
+        minzoom: 6,
+        maxzoom: 15,
         attribution: '© TomTom',
       });
     }
-    if (!m.getLayer('sb-traffic-tiles')) {
-      m.addLayer({ id: 'sb-traffic-tiles', type: 'raster', source: 'sb-traffic-tiles', paint: { 'raster-opacity': 0.85 } }, m.getLayer('sb-routes-alt') ? 'sb-routes-alt' : before);
+    if (!m.getLayer('sb-flow')) {
+      m.addLayer(
+        { id: 'sb-flow', type: 'line', source: 'sb-flow', 'source-layer': 'Traffic flow', filter: FLOW_SLOW, layout: LINE, paint: { 'line-color': FLOW_COLOR, 'line-width': FLOW_WIDTH, 'line-offset': FLOW_OFFSET } },
+        m.getLayer('sb-routes-alt') ? 'sb-routes-alt' : before,
+      );
     }
   }
 
   setTraffic(on) {
     this.trafficOn = on;
     const m = this.map;
-    if (!m.isStyleLoaded()) return;
+    if (!this.styled) return;
     if (on) this.addTrafficLayer(overlayAnchor(m.getStyle()));
-    else if (m.getLayer('sb-traffic-tiles')) m.removeLayer('sb-traffic-tiles');
+    else if (m.getLayer('sb-flow')) m.removeLayer('sb-flow');
   }
 
   setNight(night) {
     if (night === this.night) return;
     this.night = night;
+    this.styled = false;
     this.map.setStyle(STYLES[night ? 'night' : 'day'], { diff: false });
   }
 

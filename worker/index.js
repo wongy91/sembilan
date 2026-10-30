@@ -110,20 +110,24 @@ async function route(request, env) {
   return json({ routes: data.routes || [] });
 }
 
+const TILE_TYPES = { png: 'image/png', pbf: 'application/x-protobuf' };
+
 async function trafficTile(env, ctx, url, match) {
   if (!env.TOMTOM_API_KEY) throw new HttpError(501, 'traffic tiles are not configured');
-  const [z, x, y] = match.slice(1).map(Number);
+  const [z, x, y] = match.slice(1, 4).map(Number);
+  const format = match[4];
   if (z < 5 || z > 18 || x < 0 || y < 0 || x >= 2 ** z || y >= 2 ** z) throw new HttpError(400, 'bad tile');
   const cache = globalThis.caches?.default;
   const key = new Request(url.toString());
   const hit = cache && (await cache.match(key));
   if (hit) return hit;
+  const size = format === 'png' ? 'tileSize=256&' : '';
   const upstream = await fetch(
-    `https://api.tomtom.com/traffic/map/4/tile/flow/relative/${z}/${x}/${y}.png?tileSize=256&key=${encodeURIComponent(env.TOMTOM_API_KEY)}`,
+    `https://api.tomtom.com/traffic/map/4/tile/flow/relative/${z}/${x}/${y}.${format}?${size}key=${encodeURIComponent(env.TOMTOM_API_KEY)}`,
     { signal: AbortSignal.timeout(8000) },
   );
   if (!upstream.ok) return new Response(null, { status: upstream.status === 404 ? 404 : 502 });
-  const res = new Response(upstream.body, { headers: { 'content-type': 'image/png', 'cache-control': 'public, max-age=60' } });
+  const res = new Response(upstream.body, { headers: { 'content-type': TILE_TYPES[format], 'cache-control': 'public, max-age=60' } });
   if (cache) ctx.waitUntil(cache.put(key, res.clone()));
   return res;
 }
@@ -369,7 +373,7 @@ async function api(request, env, ctx, url) {
   if (pathname === '/api/route' && method === 'POST') return route(request, env);
   if (pathname === '/api/fares' && method === 'POST') return fares(request, now);
   if (pathname === '/api/log' && method === 'POST') return logError(request);
-  const tile = /^\/api\/traffic\/(\d+)\/(\d+)\/(\d+)\.png$/.exec(pathname);
+  const tile = /^\/api\/traffic\/(\d+)\/(\d+)\/(\d+)\.(png|pbf)$/.exec(pathname);
   if (tile && method === 'GET') {
     await throttle(env.TILE_LIMIT, request, 'tile');
     return trafficTile(env, ctx, url, tile);

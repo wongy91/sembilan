@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { exportPlaces, findSaved, forget, importPlaces, readPlaces, removeSaved, savePlace } from '../public/src/store.js';
+import { exportPlaces, findSaved, forget, importPlaces, load, readPlaces, removeSaved, savePlace } from '../public/src/store.js';
 
 const klcc = { name: 'KLCC', sub: 'Kuala Lumpur', lon: 101.7117, lat: 3.1579 };
 const midValley = { name: 'Mid Valley Megamall', sub: 'Kuala Lumpur', lon: 101.6776, lat: 3.1178 };
@@ -62,4 +62,19 @@ test('saved places travel in a places link and merge on import', () => {
   const state = { home: null, work: null, recents: [], saved: [{ ...klcc, label: 'Old name' }, { ...midValley, label: 'Mall' }] };
   importPlaces(state, places);
   assert.deepEqual(state.saved.map((s) => s.label), ['Gym', 'Mall']);
+});
+
+test('live traffic is on unless the user switched it off themselves', () => {
+  const loadWith = (stored) => {
+    globalThis.localStorage = { getItem: () => JSON.stringify(stored) };
+    try {
+      return load().traffic;
+    } finally {
+      delete globalThis.localStorage;
+    }
+  };
+  assert.equal(loadWith({}), true, 'new users');
+  assert.equal(loadWith({ traffic: false }), true, 'the old default, never touched');
+  assert.equal(loadWith({ traffic: false, trafficChosen: true }), false, 'switched off in Settings');
+  assert.equal(loadWith({ traffic: true, trafficChosen: true }), true);
 });

@@ -1,5 +1,5 @@
 import { reportError } from './errors.js';
-import { KL, MapView } from './map.js';
+import { KL, MapView, SIGNAL_ZOOM } from './map.js';
 import { fmtAgo, fmtClock, fmtDistance, fmtDuration, getLang, setLang, t } from './i18n.js';
 import { nearbyPlaces, reversePlace, searchPlaces } from './search.js';
 import { fasterRoute, loadLanes, pickFaster, planRoutes } from './routing.js';
@@ -1421,6 +1421,14 @@ function closeRecentMenu() {
   render();
 }
 
+function loadSignals() {
+  if (state.signals || map.map.getZoom() < SIGNAL_ZOOM - 1) return;
+  state.signals = fetch('data/signals.json')
+    .then((r) => r.json())
+    .then((data) => map.setSignals(data.signals))
+    .catch(() => (state.signals = null));
+}
+
 function checkForUpdate() {
   navigator.serviceWorker?.getRegistration().then((reg) => reg?.update()).catch(() => {});
 }
@@ -1438,6 +1446,7 @@ async function offerUpdate() {
 function changeSetting(key, value) {
   settings[key] = value;
   if (key === 'night') settings.nightChosen = true;
+  if (key === 'traffic') settings.trafficChosen = true;
   store.save(settings);
   if (key === 'lang') {
     setLang(value);
@@ -1767,6 +1776,7 @@ fetch('data/pois.json')
   .then((r) => r.json())
   .then((data) => (state.poiData = data))
   .catch(() => {});
+map?.map.on('zoomend', loadSignals);
 health().then((backend) => {
   state.backend = backend;
   state.backendKnown = true;

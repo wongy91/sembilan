@@ -336,6 +336,29 @@ test('rate limits: each visitor gets its own budget per endpoint, and a spent bu
   assert.deepEqual(keys, ['search:10.0.0.1', 'search:10.0.0.1', 'search:10.0.0.2', 'route:10.0.0.1', 'tile:10.0.0.1', 'tile:10.0.0.1']);
 });
 
+test('traffic tiles come from TomTom as vector or raster flow tiles, without the key', async () => {
+  const seen = [];
+  await withFetch(
+    async (url) => {
+      seen.push(new URL(url));
+      return new Response('tile');
+    },
+    async () => {
+      const vector = await call({ TOMTOM_API_KEY: 'secret-key' }, '/api/traffic/15/25645/16091.pbf');
+      assert.equal(vector.status, 200);
+      assert.equal(vector.headers.get('content-type'), 'application/x-protobuf');
+      assert.equal((await call({ TOMTOM_API_KEY: 'secret-key' }, '/api/traffic/10/806/494.png')).headers.get('content-type'), 'image/png');
+      assert.equal((await call({ TOMTOM_API_KEY: 'secret-key' }, '/api/traffic/15/25645/16091.mvt')).status, 404);
+      assert.equal((await call({ TOMTOM_API_KEY: 'secret-key' }, '/api/traffic/19/1/1.pbf')).status, 400);
+    },
+  );
+  assert.deepEqual(
+    seen.map((u) => `${u.pathname}?tileSize=${u.searchParams.get('tileSize')}`),
+    ['/traffic/map/4/tile/flow/relative/15/25645/16091.pbf?tileSize=null', '/traffic/map/4/tile/flow/relative/10/806/494.png?tileSize=256'],
+  );
+  assert.ok(seen.every((u) => u.searchParams.get('key') === 'secret-key'));
+});
+
 test('non-API paths go to static assets', async () => {
   const env = { ASSETS: { fetch: async () => new Response('index') } };
   assert.equal(await (await worker.fetch(new Request('https://sembilan.test/'), env, ctx)).text(), 'index');

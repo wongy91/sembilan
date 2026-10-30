@@ -8,7 +8,7 @@ const DEFAULTS = {
   avoidTolls: false,
   avoidHighways: false,
   threeD: false,
-  traffic: false,
+  traffic: true,
   home: null,
   work: null,
   recents: [],
@@ -28,6 +28,7 @@ export function load() {
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) || '{}');
     if (!saved.nightChosen) delete saved.night;
+    if (!saved.trafficChosen) delete saved.traffic;
     return { ...DEFAULTS, lang: deviceLang(), ...saved };
   } catch {
     return { ...DEFAULTS, lang: deviceLang() };
