@@ -1745,8 +1745,9 @@ function bindUi() {
     if (state.nav) acquireWakeLock();
   });
   new ResizeObserver(() => slide.from == null && !slide.raf && syncSlide()).observe($('sheet'));
-  new ResizeObserver(measureBanner).observe($('banner'));
+  new ResizeObserver(measureBanner).observe($('banner'), { box: 'border-box' });
   window.addEventListener('resize', measureSheet);
+  window.addEventListener('resize', measureBanner);
   window.addEventListener('offline', () => toast(t('offline')));
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
