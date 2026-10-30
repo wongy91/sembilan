@@ -8,17 +8,25 @@ const STYLES = {
 };
 export const KL = [101.6869, 3.139];
 export const SIGNAL_ZOOM = 15.5;
-const FUEL_NAME = ['downcase', ['coalesce', ['get', 'name'], '']];
-const FUEL_BRAND = [
-  'case',
-  ['in', 'petronas', FUEL_NAME], 'Petronas',
-  ['in', 'petron', FUEL_NAME], 'Petron',
-  ['in', 'shell', FUEL_NAME], 'Shell',
-  ['any', ['in', 'bhp', FUEL_NAME], ['in', 'bh petrol', FUEL_NAME]], 'BHPetrol',
-  ['in', 'caltex', FUEL_NAME], 'Caltex',
-  '',
+const STATION_NAME = ['downcase', ['coalesce', ['get', 'name'], '']];
+const brandOf = (brands) => ['case', ...brands.flatMap(([words, brand]) => [['any', ...words.map((w) => ['in', w, STATION_NAME])], brand]), ''];
+const stationLabel = (brand) => ['step', ['zoom'], brand, 16, ['case', ['!=', brand, ''], brand, ['coalesce', ['get', 'name'], '']]];
+const STATIONS = [
+  {
+    id: 'sb-fuel',
+    kind: 'fuel',
+    color: '#344054',
+    label: stationLabel(brandOf([[['petronas'], 'Petronas'], [['petron'], 'Petron'], [['shell'], 'Shell'], [['bhp', 'bh petrol'], 'BHPetrol'], [['caltex'], 'Caltex']])),
+  },
+  {
+    id: 'sb-ev',
+    kind: 'charging_station',
+    color: '#079455',
+    label: stationLabel(
+      brandOf([[['tesla', 'supercharger'], 'Tesla'], [['gentari'], 'Gentari'], [['chargesini', 'charge sini'], 'ChargeSini'], [['jomcharge'], 'JomCharge'], [['chargev'], 'ChargEV'], [['dc handal'], 'DC Handal'], [['shell'], 'Shell Recharge']]),
+    ),
+  },
 ];
-const FUEL_LABEL = ['step', ['zoom'], FUEL_BRAND, 16, ['case', ['!=', FUEL_BRAND, ''], FUEL_BRAND, ['coalesce', ['get', 'name'], '']]];
 const EMPTY = { type: 'FeatureCollection', features: [] };
 const LINE = { 'line-cap': 'round', 'line-join': 'round' };
 const ROUTE_WIDTH = [[8, 3], [12, 4.5], [15, 7], [18, 12], [20, 18]];
@@ -132,12 +140,12 @@ function signalIcon() {
   return g.getImageData(0, 0, 20, 44);
 }
 
-function fuelIcon() {
+function stationIcon({ kind, color }) {
   const canvas = document.createElement('canvas');
   canvas.width = 44;
   canvas.height = 44;
   const g = canvas.getContext('2d');
-  g.fillStyle = '#344054';
+  g.fillStyle = color;
   g.strokeStyle = '#fff';
   g.lineWidth = 3;
   g.beginPath();
@@ -145,13 +153,19 @@ function fuelIcon() {
   g.fill();
   g.stroke();
   g.fillStyle = '#fff';
+  if (kind === 'charging_station') {
+    g.beginPath();
+    for (const [x, y] of [[25, 8], [13, 24], [21, 24], [18, 36], [31, 19], [23, 19]]) g.lineTo(x, y);
+    g.closePath();
+    g.fill();
+    return g.getImageData(0, 0, 44, 44);
+  }
   g.beginPath();
   g.roundRect(13, 11, 12, 21, 2);
   g.fill();
   g.fillRect(11, 30, 16, 3);
-  g.fillStyle = '#344054';
+  g.fillStyle = color;
   g.fillRect(15, 14, 8, 6);
-  g.strokeStyle = '#fff';
   g.lineWidth = 2;
   g.lineCap = 'round';
   g.lineJoin = 'round';
@@ -271,11 +285,13 @@ export class MapView {
       });
     }
     m.on('click', 'sb-routes-alt', (e) => this.handlers.onRouteClick?.(e.features[0].properties.i));
-    m.on('click', 'sb-fuel', (e) => {
-      const f = e.features[0];
-      const [lon, lat] = f.geometry.coordinates;
-      this.handlers.onFuelClick?.({ name: f.properties.name || '', lon, lat });
-    });
+    for (const { id, kind } of STATIONS) {
+      m.on('click', id, (e) => {
+        const f = e.features[0];
+        const [lon, lat] = f.geometry.coordinates;
+        this.handlers.onStationClick?.({ name: f.properties.name || '', lon, lat, kind });
+      });
+    }
     m.on('mouseenter', 'sb-routes-alt', () => (m.getCanvas().style.cursor = 'pointer'));
     m.on('mouseleave', 'sb-routes-alt', () => (m.getCanvas().style.cursor = ''));
   }
@@ -317,37 +333,40 @@ export class MapView {
     add({ id: 'sb-traffic', type: 'line', source: 'sb-traffic', layout: LINE, paint: { 'line-color': ['match', ['get', 'level'], 1, '#f79009', 2, '#e8590c', 3, '#d92d20', '#7a271a'], 'line-width': width() } });
     add({ id: 'sb-toll', type: 'line', source: 'sb-toll', layout: LINE, paint: { 'line-color': '#ffcc00', 'line-width': width(0.3), 'line-dasharray': [1, 2] } });
     this.addSignals(before);
-    this.addFuel();
+    this.addStations();
     this.apply3D();
     this.styled = true;
   }
 
-  addFuel() {
+  addStations() {
     const m = this.map;
-    if (!m.getSource('openmaptiles') || m.getLayer('sb-fuel')) return;
-    if (!m.hasImage('sb-fuel')) m.addImage('sb-fuel', fuelIcon(), { pixelRatio: 2 });
+    if (!m.getSource('openmaptiles')) return;
     const font = m.getStyle().layers.find((l) => l['source-layer'] === 'poi' && l.layout?.['text-font'])?.layout['text-font'] || ['Noto Sans Regular'];
-    m.addLayer({
-      id: 'sb-fuel',
-      type: 'symbol',
-      source: 'openmaptiles',
-      'source-layer': 'poi',
-      minzoom: 14,
-      filter: ['==', ['get', 'subclass'], 'fuel'],
-      layout: {
-        'icon-image': 'sb-fuel',
-        'icon-size': ['interpolate', ['linear'], ['zoom'], 14, 0.8, 17, 1.05],
-        'icon-allow-overlap': true,
-        'text-field': FUEL_LABEL,
-        'text-font': font,
-        'text-size': 12,
-        'text-anchor': 'top',
-        'text-offset': [0, 1.1],
-        'text-max-width': 8,
-        'text-optional': true,
-      },
-      paint: { 'text-color': this.night ? '#e4e7ec' : '#344054', 'text-halo-color': this.night ? '#101419' : '#fff', 'text-halo-width': 1.5 },
-    });
+    for (const station of STATIONS) {
+      if (m.getLayer(station.id)) continue;
+      if (!m.hasImage(station.id)) m.addImage(station.id, stationIcon(station), { pixelRatio: 2 });
+      m.addLayer({
+        id: station.id,
+        type: 'symbol',
+        source: 'openmaptiles',
+        'source-layer': 'poi',
+        minzoom: 14,
+        filter: ['==', ['get', 'subclass'], station.kind],
+        layout: {
+          'icon-image': station.id,
+          'icon-size': ['interpolate', ['linear'], ['zoom'], 14, 0.8, 17, 1.05],
+          'icon-allow-overlap': true,
+          'text-field': station.label,
+          'text-font': font,
+          'text-size': 12,
+          'text-anchor': 'top',
+          'text-offset': [0, 1.1],
+          'text-max-width': 8,
+          'text-optional': true,
+        },
+        paint: { 'text-color': this.night ? '#e4e7ec' : '#344054', 'text-halo-color': this.night ? '#101419' : '#fff', 'text-halo-width': 1.5 },
+      });
+    }
   }
 
   setSignals(flat) {

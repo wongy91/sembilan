@@ -114,7 +114,11 @@ function createMap() {
         $('btn-recenter').hidden = false;
       },
       onRouteClick: selectRoute,
-      onFuelClick: (place) => (state.mode === 'home' || state.mode === 'place') && selectPlace({ ...place, name: place.name || t('catFuel'), sub: t('catFuel') }),
+      onStationClick: ({ name, lon, lat, kind }) => {
+        if (state.mode !== 'home' && state.mode !== 'place') return;
+        const sub = t(kind === 'fuel' ? 'catFuel' : 'catEv');
+        selectPlace({ name: name || sub, sub, lon, lat });
+      },
       onReportClick: showReportPopup,
     });
   } catch (err) {
