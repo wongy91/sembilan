@@ -4,6 +4,21 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-10-30
+
+### Added
+
+- **Traffic lights on the map**: when you zoom in to street level, traffic lights show as small icons at junctions (14,000+ across Malaysia, from OpenStreetMap). They're downloaded once, the first time you zoom in that far.
+
+### Changed
+
+- **Live traffic is on by default, like Waze**: the map shows only slow roads. Yellow means below 75% of normal speed, red below 35%, and dark red below 15% or closed. Free-flowing roads are no longer painted green. If you turned traffic off in Settings yourself, it stays off.
+- The **Privacy** screen explains that, with live traffic on, the map area you're looking at goes to TomTom through Sembilan's server.
+
+### Fixed
+
+- Turning on live traffic while the map was still loading could leave the traffic layer missing until the day/night theme changed.
+
 ## [0.16.0] - 2026-10-30
 
 ### Added
@@ -231,7 +246,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.16.0...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.17.0...HEAD
+[0.17.0]: https://github.com/wongy91/sembilan/compare/0.16.0...0.17.0
 [0.16.0]: https://github.com/wongy91/sembilan/compare/0.15.2...0.16.0
 [0.15.2]: https://github.com/wongy91/sembilan/compare/0.15.1...0.15.2
 [0.15.1]: https://github.com/wongy91/sembilan/compare/0.15.0...0.15.1
