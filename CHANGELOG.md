@@ -4,6 +4,16 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-10-31
+
+### Changed
+
+- **Faster reroute after a missed turn**: when you drive away from the route, the app now notices in about 3 seconds at 50 km/h instead of about 6, so the new route is ready around 50 m past the turn instead of 100 m. Small GPS wobbles and a missed highway exit still use the slower, careful check, so you don't get rerouted by mistake.
+
+### Added
+
+- **Spoken "Rerouting"**: you now hear "Rerouting" as soon as the app leaves your old route, then the first instruction of the new one ("In 500 meters, turn left onto Jalan Raja Chulan"). Before, it said nothing until the next turn of the new route came close.
+
 ## [0.22.1] - 2026-10-30
 
 ### Fixed
@@ -308,7 +318,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.22.1...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.23.0...HEAD
+[0.23.0]: https://github.com/wongy91/sembilan/compare/0.22.1...0.23.0
 [0.22.1]: https://github.com/wongy91/sembilan/compare/0.22.0...0.22.1
 [0.22.0]: https://github.com/wongy91/sembilan/compare/0.21.0...0.22.0
 [0.21.0]: https://github.com/wongy91/sembilan/compare/0.20.0...0.21.0
