@@ -4,6 +4,12 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-10-30
+
+### Added
+
+- **EV chargers on the map**: from street-level zoom, chargers show as a green ⚡ icon with the operator underneath: Tesla, Gentari, ChargeSini, JomCharge, ChargEV, DC Handal or Shell Recharge. Tap one on the home screen to get directions. They come from OpenStreetMap, which lists far fewer chargers than petrol stations, so some chargers will be missing.
+
 ## [0.19.0] - 2026-10-30
 
 ### Added
@@ -282,7 +288,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.19.0...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.20.0...HEAD
+[0.20.0]: https://github.com/wongy91/sembilan/compare/0.19.0...0.20.0
 [0.19.0]: https://github.com/wongy91/sembilan/compare/0.18.1...0.19.0
 [0.18.1]: https://github.com/wongy91/sembilan/compare/0.18.0...0.18.1
 [0.18.0]: https://github.com/wongy91/sembilan/compare/0.17.3...0.18.0
