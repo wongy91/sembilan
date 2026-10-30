@@ -4,6 +4,13 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-10-30
+
+### Changed
+
+- **Search tells branches apart, like Waze**: when several results share a name, each gets its neighbourhood ("Bubble Gum Wax (Bukit Jalil)", "Petronas (Salak South)"), and the nearest branch comes first. Different places that happen to share a name stay where they were, and two points of one landmark (like KLCC) aren't renamed.
+- Businesses now show their street address ("No 1-21, Residensi Park, Persiaran Jalil Utama, Petaling") instead of only the town and the kind of business.
+
 ## [0.20.0] - 2026-10-30
 
 ### Added
@@ -288,7 +295,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.20.0...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.21.0...HEAD
+[0.21.0]: https://github.com/wongy91/sembilan/compare/0.20.0...0.21.0
 [0.20.0]: https://github.com/wongy91/sembilan/compare/0.19.0...0.20.0
 [0.19.0]: https://github.com/wongy91/sembilan/compare/0.18.1...0.19.0
 [0.18.1]: https://github.com/wongy91/sembilan/compare/0.18.0...0.18.1
