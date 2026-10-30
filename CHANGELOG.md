@@ -9,7 +9,7 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 ### Added
 
 - **Add a stop while driving**: tap a search result, or a petrol station or EV charger on the map, then **Add stop**. The route goes through the stop and carries on to your destination, and the voice tells you when it's coming up ("Your stop is on the left"). The stop shows under the arrival time with the distance to it; tap ✕ to remove it. **Go here instead** still replaces the destination. Before, tapping a place while driving always replaced the destination.
-- **Petrol on your route**: while driving, ⛽ lists the stations ahead on your route, in the order you reach them, with how far ahead each is and the extra minutes it adds ("1.2 km · +1 min"). It looks up to 100 km ahead and leaves out stations more than a 10-minute detour away. Without live traffic it shows nearby stations, as before.
+- **Petrol on your route**: while driving, ⛽ lists the stations ahead on your route, in the order you reach them, with how far ahead each is and the extra minutes it adds ("1.2 km · +1 min"). It looks up to 100 km ahead and leaves out stations more than a 10-minute detour away. If that search is unavailable, it shows nearby stations, as before.
 
 ## [0.21.0] - 2026-10-30
 
