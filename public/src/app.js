@@ -1109,7 +1109,7 @@ function drawNavRoutes(nav, along = nav.navigator.progress().along) {
   nav.lineAlong = along;
 }
 
-function useRoute(nav, route) {
+function useRoute(nav, route, announce = false) {
   clearOffer(nav);
   nav.fresh = null;
   nav.routeChangedAt = Date.now();
@@ -1121,7 +1121,7 @@ function useRoute(nav, route) {
   nav.basePois = [...poisAlongRoute(route, state.poiData), ...trafficPois(route)];
   nav.pois = [...nav.basePois, ...reportPois(route, nav.reports)];
   if (state.backend.fares) loadPrices([route], [nav.basePois]);
-  nav.navigator = new Navigator(route, { lang: getLang(), pois: nav.pois, resumed: true });
+  nav.navigator = new Navigator(route, { lang: getLang(), pois: nav.pois, resumed: true, announce });
   state.routes = [route];
   map.setPois(nav.pois);
   if (nav.simulated) {
@@ -1319,10 +1319,11 @@ async function reroute(fix) {
   nav.rerouting = true;
   nav.lastReroute = Date.now();
   toast(t('rerouting'));
+  voice.say([{ text: t('reroutingSpoken'), priority: 2 }]);
   try {
     const [route] = await planRoutes([fix.lon, fix.lat], [nav.dest.lon, nav.dest.lat], driveOptions(nav, fix));
     if (state.nav !== nav) return;
-    useRoute(nav, route);
+    useRoute(nav, route, true);
   } catch {
     if (state.nav === nav) {
       toast(t('rerouteFailed'));

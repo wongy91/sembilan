@@ -1,10 +1,11 @@
-import { angleDiff, bearing, haversine, indexAt, locate } from './geo.js';
+import { angleDiff, bearing, bearingAt, haversine, indexAt, locate } from './geo.js';
 import { SILENT, chain, continueFor, instruction, withDistance } from './instructions.js';
 import { ALERT_LEAD, alertText } from './pois.js';
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 export const SPEEDING_MARGIN = 5;
 const SPEEDING_QUIET = 60000;
+const TURNED_AWAY = 35;
 
 function timeAfter(route, index, along) {
   const steps = route.steps;
@@ -23,7 +24,7 @@ export function timeLeft(route, along) {
 }
 
 export class Navigator {
-  constructor(route, { lang = 'ms', pois = [], resumed = false } = {}) {
+  constructor(route, { lang = 'ms', pois = [], resumed = false, announce = false } = {}) {
     this.route = route;
     this.lang = lang;
     this.pois = [];
@@ -39,6 +40,7 @@ export class Navigator {
     this.lastOnTime = null;
     this.arrived = false;
     this.started = resumed;
+    this.announce = announce;
     this.speeding = false;
     this.speedingAt = -Infinity;
   }
@@ -93,7 +95,9 @@ export class Navigator {
     if (loc.dist > tol || wrongWay) {
       this.offCount++;
       this.offSince ??= fix.time;
-      if (!this.rerouteRequested && this.offCount >= 3 && fix.time - this.offSince >= 4000) {
+      const turnedAway = !wrongWay && speed !== null && speed > 5 && Number.isFinite(fix.heading) && angleDiff(fix.heading, bearingAt(r.coords, r.cum, loc.along)) > TURNED_AWAY;
+      const confirmed = turnedAway ? this.offCount >= 2 && fix.time - this.offSince >= 1000 : this.offCount >= 3 && fix.time - this.offSince >= 4000;
+      if (!this.rerouteRequested && confirmed) {
         this.rerouteRequested = true;
         out.offRoute = true;
       }
@@ -152,6 +156,16 @@ export class Navigator {
     } else if (passedVoiced && dist > 5000 && !this.said.has(key('post'))) {
       out.speech.push({ text: continueFor(dist, this.lang), priority: 1 });
       this.said.add(key('post'));
+    }
+
+    if (this.announce) {
+      this.announce = false;
+      if (!out.speech.length && next.kind !== 'continue') {
+        out.speech.push({ text: withThen(withDistance(this.say(next), dist, this.lang)), priority: 1 });
+        if (dist <= near + 200) this.said.add(key('near'));
+        if (dist <= Math.max(far, near + 200)) this.said.add(key('far'));
+      }
+      for (const s of out.speech) s.priority = 1;
     }
 
     for (const poi of this.pois) {

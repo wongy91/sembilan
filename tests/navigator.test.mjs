@@ -111,3 +111,56 @@ test('does not flag GPS noise of 25 m as off-route', () => {
   const log = drive(route, nav, { offset: 0.0002 });
   assert.ok(log.last.arrived);
 });
+
+function missTurn(route, nav, { speed = 14, heading = null } = {}) {
+  const turn = route.steps.find((s) => s.kind === 'turn' && /^(left|right)$/.test(s.modifier || '') && s.along > 400);
+  let along = turn.along - 200;
+  let t = 0;
+  for (; along < turn.along; along += speed, t++) {
+    const p = pointAt(route.coords, route.cum, along);
+    nav.update({ lon: p[0], lat: p[1], accuracy: 5, speed, heading: bearingAt(route.coords, route.cum, along), time: t * 1000 });
+  }
+  const straight = heading ?? bearingAt(route.coords, route.cum, turn.along - 30, 30);
+  const corner = pointAt(route.coords, route.cum, turn.along);
+  for (let i = 1; i <= 15; i++) {
+    const d = speed * i;
+    const r = (straight * Math.PI) / 180;
+    const p = [corner[0] + (d * Math.sin(r)) / (111320 * Math.cos((corner[1] * Math.PI) / 180)), corner[1] + (d * Math.cos(r)) / 110574];
+    if (nav.update({ lon: p[0], lat: p[1], accuracy: 5, speed, heading: straight, time: (t + i) * 1000 }).offRoute) return i;
+  }
+  return null;
+}
+
+test('a missed turn is caught on the second fix that heads away from the route', () => {
+  const [route] = fromValhalla(fixture('valhalla_klcc_midvalley.json'));
+  const seconds = missTurn(route, new Navigator(route));
+  assert.ok(seconds != null && seconds <= 5, `rerouted ${seconds} s after the turn`);
+});
+
+test('drifting off the line while heading the same way still waits 4 seconds', () => {
+  const [route] = fromValhalla(fixture('valhalla_putrajaya.json'));
+  const nav = new Navigator(route);
+  drive(route, nav, { until: 1000 });
+  const offs = [];
+  for (let i = 0; i < 8; i++) {
+    const along = 1000 + i * 10;
+    const p = pointAt(route.coords, route.cum, along);
+    const h = bearingAt(route.coords, route.cum, along);
+    const side = ((h + 90) * Math.PI) / 180;
+    const q = [p[0] + (60 * Math.sin(side)) / (111320 * Math.cos((p[1] * Math.PI) / 180)), p[1] + (60 * Math.cos(side)) / 110574];
+    offs.push(nav.update({ lon: q[0], lat: q[1], accuracy: 5, speed: 10, heading: h, time: 2000000 + i * 1000 }).offRoute);
+  }
+  assert.equal(offs.indexOf(true), 4, 'third off fix and 4 s after the first');
+});
+
+test('after a reroute, the first instruction of the new route is spoken once, queued behind "Rerouting"', () => {
+  const [route] = fromValhalla(fixture('valhalla_kl_ipoh.json'));
+  const nav = new Navigator(route, { lang: 'en', resumed: true, announce: true });
+  const start = pointAt(route.coords, route.cum, 20);
+  const first = nav.update({ lon: start[0], lat: start[1], accuracy: 5, speed: 14, heading: bearingAt(route.coords, route.cum, 20), time: 0 });
+  assert.equal(first.speech.length, 1);
+  assert.match(first.speech[0].text, /^In \d/);
+  assert.equal(first.speech[0].priority, 1);
+  const next = pointAt(route.coords, route.cum, 34);
+  assert.equal(nav.update({ lon: next[0], lat: next[1], accuracy: 5, speed: 14, heading: bearingAt(route.coords, route.cum, 34), time: 1000 }).speech.length, 0);
+});
