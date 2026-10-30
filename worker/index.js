@@ -13,11 +13,9 @@ const fareCache = new Map();
 const SEARCH_TTL_MS = 6 * 3600000;
 const searchCache = new Map();
 const NEARBY_CATEGORIES = { fuel: '7311', food: '7315', parking: '7369,7313', ev: '7309' };
-const ALONG_QUERIES = { fuel: 'petrol station' };
-const MAX_DETOUR_S = 600;
 const placesChunks = new Map();
 let placesManifest = null;
-const THROTTLED = { '/api/search': 'search', '/api/along': 'search', '/api/route': 'route', '/api/fares': 'fares', '/api/log': 'log' };
+const THROTTLED = { '/api/search': 'search', '/api/route': 'route', '/api/fares': 'fares', '/api/log': 'log' };
 
 class HttpError extends Error {
   constructor(status, message) {
@@ -67,17 +65,17 @@ async function reporterId(request, env, now) {
   return [...digest.slice(0, 12)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-function pointList(value, field) {
+function referenceRoute(value) {
   if (!Array.isArray(value) || value.length < 2 || value.length > MAX_REFERENCE_POINTS) {
-    throw new HttpError(400, `${field} must hold 2 to ${MAX_REFERENCE_POINTS} [lon, lat] points`);
+    throw new HttpError(400, `reference must hold 2 to ${MAX_REFERENCE_POINTS} [lon, lat] points`);
   }
-  return value.map((p) => lonLat(p, field));
+  return value.map((p) => lonLat(p, 'reference'));
 }
 
 async function route(request, env) {
   if (!env.TOMTOM_API_KEY) throw new HttpError(501, 'live traffic routing is not configured');
   const input = await body(request, MAX_ROUTE_BODY);
-  const reference = input.reference == null ? null : pointList(input.reference, 'reference');
+  const reference = input.reference == null ? null : referenceRoute(input.reference);
   const from = reference ? reference[0] : lonLat(input.from, 'from');
   const via = reference || input.via == null ? null : lonLat(input.via, 'via');
   const to = reference ? reference.at(-1) : lonLat(input.to, 'to');
@@ -172,36 +170,6 @@ async function search(env, url, now) {
   const results = ((await upstream.json()).results || []).map(tomtomPlace).filter((p) => p?.name);
   searchCache.set(key, { results, time: now });
   if (searchCache.size > 2000) searchCache.delete(searchCache.keys().next().value);
-  return json({ results });
-}
-
-async function along(request, env) {
-  if (!env.TOMTOM_API_KEY) throw new HttpError(501, 'search is not configured');
-  const input = await body(request, MAX_ROUTE_BODY);
-  const query = ALONG_QUERIES[input.cat];
-  if (!query) throw new HttpError(400, 'unknown category');
-  const points = pointList(input.points, 'points').map(([lon, lat]) => ({ lat, lon }));
-  const params = new URLSearchParams({
-    key: env.TOMTOM_API_KEY,
-    categorySet: NEARBY_CATEGORIES[input.cat],
-    maxDetourTime: String(MAX_DETOUR_S),
-    limit: '10',
-    sortBy: 'detourOffset',
-    detourOffset: 'true',
-  });
-  const upstream = await fetch(`https://api.tomtom.com/search/2/searchAlongRoute/${encodeURIComponent(query)}.json?${params}`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ route: { points } }),
-    signal: AbortSignal.timeout(8000),
-  });
-  if (!upstream.ok) throw new HttpError(502, `search upstream returned ${upstream.status}`);
-  const results = ((await upstream.json()).results || [])
-    .map((r) => {
-      const place = tomtomPlace(r);
-      return place?.name && Number.isFinite(r.detourOffset) ? { ...place, detour: r.detourTime ?? null, offset: r.detourOffset } : null;
-    })
-    .filter(Boolean);
   return json({ results });
 }
 
@@ -402,7 +370,6 @@ async function api(request, env, ctx, url) {
   }
   if (THROTTLED[pathname]) await throttle(env.API_LIMIT, request, THROTTLED[pathname]);
   if (pathname === '/api/search' && method === 'GET') return search(env, url, now);
-  if (pathname === '/api/along' && method === 'POST') return along(request, env);
   if (pathname === '/api/places' && method === 'GET') return places(env, url);
   if (pathname === '/api/route' && method === 'POST') return route(request, env);
   if (pathname === '/api/fares' && method === 'POST') return fares(request, now);

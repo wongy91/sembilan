@@ -1,11 +1,11 @@
 import { reportError } from './errors.js';
 import { KL, MapView, SIGNAL_ZOOM } from './map.js';
 import { fmtAgo, fmtClock, fmtDistance, fmtDuration, getLang, setLang, t } from './i18n.js';
-import { nearbyPlaces, placesAhead, reversePlace, searchPlaces } from './search.js';
-import { fasterRoute, loadLanes, pickFaster, planRoutes } from './routing.js';
+import { nearbyPlaces, reversePlace, searchPlaces, withBranchNames } from './search.js';
+import { detourTimes, fasterRoute, loadLanes, pickFaster, planRoutes } from './routing.js';
 import { Navigator, SPEEDING_MARGIN, timeLeft } from './navigator.js';
 import { bannerOf, maneuverIcon, roadName } from './instructions.js';
-import { poisAlongRoute, reportPois, summarize, trafficPois } from './pois.js';
+import { fuelAlongRoute, poisAlongRoute, reportPois, summarize, trafficPois } from './pois.js';
 import { attachFares, fareGroups, fareKeys, fetchFares, priceRoute } from './fares.js';
 import { bbox, bearing, haversine, locate, pointAt } from './geo.js';
 import { REPORT_ICON, REPORT_KINDS, fetchReports, health, postReport, voteReport } from './reports.js';
@@ -98,6 +98,8 @@ const COMMUTE_TTL = 10 * 60000;
 const COMMUTE_HERE = 300;
 const COMMUTE_ACCURACY = 1000;
 const STOP_REACHED = 50;
+const FUEL_CANDIDATES = 10;
+const FUEL_MAX_DETOUR = 600;
 
 const map = createMap();
 window.sembilan = { map, state, checkTraffic: () => state.nav && checkTraffic(state.nav) };
@@ -686,20 +688,37 @@ const CATEGORY_LABEL = { fuel: 'catFuel', food: 'catFood', parking: 'catParking'
 const detourText = (s) => (s == null ? '' : s < 60 ? t('noDetour') : t('detour', { m: Math.round(s / 60) }));
 
 async function stationsAhead(nav, signal) {
+  let stations;
   try {
-    const list = await placesAhead('fuel', nav.route, nav.navigator.progress().along, { signal });
-    return list.map((p) => ({ ...p, sub: [detourText(p.detour), p.sub].filter(Boolean).join(' · ') }));
-  } catch (err) {
-    if (signal.aborted) throw err;
+    state.fuelData ??= fetch('data/fuel.json').then((r) => (r.ok ? r.json() : Promise.reject(new Error(`fuel ${r.status}`))));
+    stations = (await state.fuelData).fuel;
+  } catch {
+    state.fuelData = null;
     return null;
   }
+  const route = nav.route;
+  const along = nav.navigator.progress().along;
+  const list = fuelAlongRoute(route, stations, along).slice(0, FUEL_CANDIDATES);
+  let detours = [];
+  if (list.length && state.fix) {
+    try {
+      detours = await detourTimes([state.fix.lon, state.fix.lat], list, route, { ...routeOptions(), heading: state.fix.heading, signal });
+    } catch (err) {
+      if (signal.aborted) throw err;
+    }
+  }
+  const label = t('catFuel');
+  const shown = list
+    .map((p, i) => ({ ...p, name: p.name || label, detour: detours[i] ?? null, dist: p.along - along }))
+    .filter((p) => p.detour == null || p.detour <= FUEL_MAX_DETOUR);
+  return (await withBranchNames(shown)).map((p) => ({ ...p, sub: [detourText(p.detour), p.sub].filter(Boolean).join(' · ') }));
 }
 
 async function runNearby(cat) {
   state.searchAbort?.abort();
   const ctrl = (state.searchAbort = new AbortController());
   const label = t(CATEGORY_LABEL[cat]);
-  const onRoute = !!state.nav && cat === 'fuel' && state.backend.search;
+  const onRoute = !!state.nav && cat === 'fuel';
   $('q').value = onRoute ? t('onRoute', { cat: label }) : label;
   $('btn-clear').hidden = false;
   document.body.classList.add('searching');

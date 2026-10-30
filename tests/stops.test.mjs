@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { bearing, haversine, pointAt } from '../public/src/geo.js';
+import { fuelAlongRoute } from '../public/src/pois.js';
+import { detourTimes } from '../public/src/routing.js';
 import { bannerOf, instruction, maneuverIcon } from '../public/src/instructions.js';
 import { fromOsrm, fromTomTom, fromValhalla } from '../public/src/providers.js';
 import { Navigator } from '../public/src/navigator.js';
@@ -72,4 +74,52 @@ test('driving through the stop announces it and carries on to the destination', 
   assert.ok(atStop.every(([along]) => along <= stop.along), 'before reaching it');
   assert.ok(arrivedAt > valhalla.distance - 50, 'the trip only ends at the destination');
   assert.match(spoken.at(-1)[1], /destination/);
+});
+
+test('petrol on your route: stations within 100 m of the road ahead, in the order you reach them', () => {
+  const route = valhalla;
+  const at = (m, east = 0) => {
+    const [lon, lat] = pointAt(route.coords, route.cum, m);
+    return [+(lon + east).toFixed(5), lat];
+  };
+  const stations = [
+    [...at(3000), 'Shell', 'Jalan Klang Lama'],
+    [...at(1500, 0.0004), 'Petronas', ''],
+    [...at(2000, 0.004), 'Too far off the road', ''],
+    [...at(500), 'Behind you', ''],
+    [101.0, 4.6, 'Ipoh', ''],
+  ];
+  const found = fuelAlongRoute(route, stations, 1000);
+  assert.deepEqual(found.map((p) => [p.name, Math.round(p.along / 100) / 10]), [['Petronas', 1.5], ['Shell', 3]]);
+  assert.equal(found[1].sub, 'Jalan Klang Lama');
+  assert.deepEqual(fuelAlongRoute(route, stations, 1000, 1800).map((p) => p.name), ['Petronas'], 'only as far ahead as asked');
+});
+
+test('detour minutes: drive to the station and back onto the route, minus staying on it', async () => {
+  const places = [{ lon: 101.68, lat: 3.1, along: 1500 }, { lon: 101.69, lat: 3.12, along: 3000 }];
+  const original = globalThis.fetch;
+  const sent = [];
+  const cell = (time) => ({ time });
+  globalThis.fetch = async (url, init) => {
+    const body = JSON.parse(init.body);
+    sent.push({ url, body });
+    const fromHere = [[cell(120), cell(300), cell(400), cell(500)]];
+    const back = [[cell(330), cell(9)], [cell(9), { time: null }]];
+    return new Response(JSON.stringify({ sources_to_targets: body.sources.length === 1 ? fromHere : back }));
+  };
+  try {
+    const times = await detourTimes([101.6845, 3.0905], places, valhalla, { heading: 30, avoidTolls: true });
+    assert.deepEqual(times, [50, null], '120 s there + 330 s back - 400 s straight on = 50 s; a missing leg gives no time');
+  } finally {
+    globalThis.fetch = original;
+  }
+  assert.ok(sent.every((s) => /\/sources_to_targets$/.test(s.url)));
+  const [fromHere, back] = [sent.find((s) => s.body.sources.length === 1).body, sent.find((s) => s.body.sources.length === 2).body];
+  assert.deepEqual(fromHere.sources[0], { lon: 101.6845, lat: 3.0905, heading: 30, heading_tolerance: 60 });
+  assert.equal(fromHere.targets.length, 4);
+  assert.deepEqual(back.sources, [{ lon: 101.68, lat: 3.1 }, { lon: 101.69, lat: 3.12 }]);
+  const rejoin = pointAt(valhalla.coords, valhalla.cum, 3500);
+  assert.deepEqual(back.targets[0], { lon: rejoin[0], lat: rejoin[1] }, 'rejoins the route 2 km past the station');
+  assert.equal(back.costing_options.auto.use_tolls, 0);
+  assert.ok(sent.every((s) => s.body.sources.length * s.body.targets.length <= 100), 'within the public server limit');
 });

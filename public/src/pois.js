@@ -2,7 +2,8 @@ import { angleDiff, bbox, bearingAt, nearestOnGrid, segmentGrid, sideOf } from '
 import { spokenDistance } from './instructions.js';
 import { tr } from './i18n.js';
 
-const LIMITS = { tollNode: 20, tollNodeNonOsm: 25, tollWay: 25, camera: 35, rr: 350, report: 40 };
+const LIMITS = { tollNode: 20, tollNodeNonOsm: 25, tollWay: 25, camera: 35, rr: 350, report: 40, fuel: 100 };
+const FUEL_REACH = 50000;
 const OSM_BASED = new Set(['valhalla', 'osrm']);
 const DIRECTION_HINTS = [
   [/\b(?:northbound|NB)\b|\b(?:arah|hala) utara\b|\(utara\)/i, 0],
@@ -83,6 +84,19 @@ export function poisAlongRoute(route, data) {
     out.push({ kind: 'rr', along: hit.along, lon, lat, name });
   }
   return dedupe(out.sort((x, y) => x.along - y.along));
+}
+
+export function fuelAlongRoute(route, stations, from = 0, reach = FUEL_REACH) {
+  const index = gridFor(route);
+  const [minX, minY, maxX, maxY] = bbox(route.coords);
+  const pad = 0.005;
+  const out = [];
+  for (const [lon, lat, name, street] of stations || []) {
+    if (lon < minX - pad || lon > maxX + pad || lat < minY - pad || lat > maxY + pad) continue;
+    const hit = nearestOnGrid(route.coords, route.cum, index, [lon, lat]);
+    if (hit && hit.dist <= LIMITS.fuel && hit.along > from && hit.along - from <= reach) out.push({ name, sub: street, lon, lat, along: hit.along });
+  }
+  return out.sort((a, b) => a.along - b.along);
 }
 
 export function trafficPois(route) {

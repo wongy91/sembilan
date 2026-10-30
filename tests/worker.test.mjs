@@ -268,50 +268,6 @@ test('nearby search asks TomTom for a category within 10 km', async () => {
   assert.equal(seen.searchParams.get('radius'), '10000');
 });
 
-test('along-route search asks TomTom for petrol stations within a 10-minute detour, ordered along the route', async () => {
-  let seen;
-  const station = (name, detourTime, detourOffset) => ({
-    poi: { name },
-    address: { streetName: 'Jalan Klang Lama', municipality: 'Kuala Lumpur' },
-    position: { lat: 3.1, lon: 101.68 },
-    detourTime,
-    detourOffset,
-  });
-  const res = await withFetch(
-    async (url, init) => {
-      seen = { url: new URL(url), init };
-      return Response.json({ results: [station('Petronas', 95, 1200), station('Shell', -10, 3400), { poi: { name: 'No offset' }, position: { lat: 3.1, lon: 101.68 } }] });
-    },
-    () => call({ TOMTOM_API_KEY: 'secret-key' }, '/api/along', { method: 'POST', body: { cat: 'fuel', points: [[101.6845, 3.0905], [101.677, 3.1175]] } }),
-  );
-  const text = await res.text();
-  assert.equal(res.status, 200);
-  assert.ok(!text.includes('secret-key'));
-  assert.equal(seen.init.method, 'POST');
-  assert.equal(seen.url.pathname, '/search/2/searchAlongRoute/petrol%20station.json');
-  assert.equal(seen.url.searchParams.get('categorySet'), '7311');
-  assert.equal(seen.url.searchParams.get('maxDetourTime'), '600');
-  assert.equal(seen.url.searchParams.get('sortBy'), 'detourOffset');
-  assert.equal(seen.url.searchParams.get('detourOffset'), 'true');
-  assert.deepEqual(JSON.parse(seen.init.body), { route: { points: [{ lat: 3.0905, lon: 101.6845 }, { lat: 3.1175, lon: 101.677 }] } });
-  assert.deepEqual(JSON.parse(text).results, [
-    { name: 'Petronas', sub: 'Jalan Klang Lama, Kuala Lumpur', lon: 101.68, lat: 3.1, detour: 95, offset: 1200 },
-    { name: 'Shell', sub: 'Jalan Klang Lama, Kuala Lumpur', lon: 101.68, lat: 3.1, detour: -10, offset: 3400 },
-  ]);
-});
-
-test('along-route search validates input and needs a TomTom key', async () => {
-  const points = [[101.6845, 3.0905], [101.677, 3.1175]];
-  assert.equal((await call({}, '/api/along', { method: 'POST', body: { cat: 'fuel', points } })).status, 501);
-  const env = { TOMTOM_API_KEY: 'k' };
-  const post = (body) => call(env, '/api/along', { method: 'POST', body });
-  assert.equal((await post({ cat: 'casino', points })).status, 400);
-  assert.equal((await post({ cat: 'fuel', points: points.slice(0, 1) })).status, 400);
-  assert.equal((await post({ cat: 'fuel', points: [points[0], [-0.12, 51.5]] })).status, 400);
-  const failed = await withFetch(async () => new Response('', { status: 500 }), () => post({ cat: 'fuel', points }));
-  assert.equal(failed.status, 502);
-});
-
 test('search proxy validates input and needs a TomTom key', async () => {
   assert.equal((await call({}, '/api/search?q=klcc&lat=3.1&lon=101.7')).status, 501);
   const env = { TOMTOM_API_KEY: 'k' };

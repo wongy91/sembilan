@@ -17,7 +17,7 @@ Free, open-source turn-by-turn navigation for Malaysia that runs in the browser.
 | Alerts | Speed cameras with their limit, toll plazas, traffic jams and community reports, spoken ahead of time |
 | R&R | The next rest area on your side of the highway |
 | Community reports | Accident, police, hazard, jam, road closed, flood, pothole. Other drivers confirm or clear them |
-| Search | Places and street addresses with the distance to each. Branches of a chain come nearest first, with their neighbourhood and street ("Bubble Gum Wax (Bukit Jalil)"). Nearby ⛽ petrol, 🍜 food, 🅿️ parking and 🔌 EV charging, also while driving. While driving, ⛽ lists the stations ahead on your route, in the order you reach them, with how far ahead and the extra minutes each adds ("+3 min"). Addresses and petrol on your route use TomTom when a key is set |
+| Search | Places and street addresses with the distance to each. Branches of a chain come nearest first, with their neighbourhood and street ("Bubble Gum Wax (Bukit Jalil)"). Nearby ⛽ petrol, 🍜 food, 🅿️ parking and 🔌 EV charging, also while driving. While driving, ⛽ lists the petrol stations on the next 50 km of your route (OpenStreetMap), in the order you reach them, with how far ahead and the extra minutes each adds ("+3 min", from Valhalla); stations more than a 10-minute detour away are left out. Addresses use TomTom when a key is set |
 | Map | Day and night themes (automatic by time), 2D or 3D buildings, traffic lights, petrol stations and EV chargers with their brand (Petronas, Shell, Petron, BHPetrol, Caltex; Tesla, Gentari, ChargeSini, JomCharge, ChargEV, DC Handal, Shell Recharge) from street-level zoom (OpenStreetMap), long-press to drop a pin |
 | Add a stop | While driving, tap a search result or a petrol station on the map, then **Add stop**: the route goes through it and carries on to your destination. The stop shows under the arrival time with the distance to it; ✕ removes it. **Go here instead** replaces the destination |
 | While driving | Arrival time that follows live traffic (refreshed every 5 minutes), a green sign with the exit number and destinations for highway exits, speedometer with speed-limit sign and a ding when you go more than 5 km/h over the limit, a 🅿️ card with car parks near your destination 1 km before you arrive, current street name, quick mute, search and settings, share ETA, arrival screen, screen stays awake |
@@ -123,21 +123,24 @@ Everything secret is a Worker secret, set with `npx wrangler secret put <NAME>`.
 
 | Name | Type | Used for |
 | -- | -- | -- |
-| `TOMTOM_API_KEY` | Secret, optional | Live-traffic routing, the traffic layer, speed limits, address search, nearby places and petrol on your route. Without it, routing uses Valhalla and OSRM, and search uses Photon only |
+| `TOMTOM_API_KEY` | Secret, optional | Live-traffic routing, the traffic layer, speed limits, address search and nearby places. Without it, routing uses Valhalla and OSRM, and search uses Photon only |
 | `REPORT_SALT` | Secret, recommended | Keeps reporter hashes from being traced back to IP addresses. Set it to a long random value |
 | `DB` | D1 binding | Community reports. Without it, reports are switched off |
 | `API_LIMIT`, `TILE_LIMIT` | [Rate-limit bindings](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/) | Per-visitor limits on the endpoints that call TomTom and PLUS: 120 requests a minute for each of search, routing, fares and error reports, and 600 traffic tiles a minute. Over the limit the Worker answers 429 and the app falls back to its free providers. Many phones on a mobile network can share one IP address, so the limits are generous. Without the bindings, nothing is limited. Forks: each `namespace_id` must be unique in your Cloudflare account |
 
 **Security headers.** `public/_headers` gives every static file a Content-Security-Policy, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` and `Permissions-Policy`; `npm run dev` applies the same file. When you add a provider the app fetches from, add its host to `connect-src`: `tests/headers.test.mjs` fails until you do. API responses come from the Worker and don't get these headers.
 
-**Privacy.** The app's **Settings → Privacy** screen says the same in plain English, Malay and Chinese; keep the three in step. Sembilan has no accounts and doesn't store anyone's location. Saved places stay on your phone; a **Copy my places** link carries them after the `#`, which browsers never send to a server. Your start point and destination go to the routing provider to plan the trip. To show the drive time to Home and Work, your position and those two places go to the routing provider when you open the app, at most once every 10 minutes. Near the end of a trip, your destination is used to search for parking. A community report stores its type, position, heading, times and votes. To rate-limit reports and votes without storing IP addresses, it also stores a hash of the reporter's IP that changes daily. Error reports carry the error message, the app version, the screen it happened on and a coarse browser name, with coordinates and IP addresses removed; Workers Logs keeps them for 3 days on the free plan. To enforce the request limits, Cloudflare counts each IP address's requests over a minute; Sembilan doesn't store those counts or addresses.
+**Privacy.** The app's **Settings → Privacy** screen says the same in plain English, Malay and Chinese; keep the three in step. Sembilan has no accounts and doesn't store anyone's location. Saved places stay on your phone; a **Copy my places** link carries them after the `#`, which browsers never send to a server. Your start point, any stop and your destination go to the routing provider to plan the trip. When you tap ⛽ while driving, your position, the petrol stations ahead and a few points on your route go to Valhalla to work out each detour. To show the drive time to Home and Work, your position and those two places go to the routing provider when you open the app, at most once every 10 minutes. Near the end of a trip, your destination is used to search for parking. A community report stores its type, position, heading, times and votes. To rate-limit reports and votes without storing IP addresses, it also stores a hash of the reporter's IP that changes daily. Error reports carry the error message, the app version, the screen it happened on and a coarse browser name, with coordinates and IP addresses removed; Workers Logs keeps them for 3 days on the free plan. To enforce the request limits, Cloudflare counts each IP address's requests over a minute; Sembilan doesn't store those counts or addresses.
 
 ## Data
 
-`npm run data` rebuilds both bundled data files:
+`npm run data` rebuilds the bundled data files:
 
 - `public/data/plus-plazas.json`: the 94 PLUS plaza codes and names, read from the fare calculator on www.plus.com.my.
 - `public/data/pois.json`: toll plazas, speed cameras and R&R from OpenStreetMap, with PLUS codes matched by name (91 of 94).
+- `public/data/signals.json`: traffic lights from OpenStreetMap.
+- `public/data/fuel.json`: petrol stations from OpenStreetMap, with name and street, for petrol on your route.
+- `public/data/areas.json`: neighbourhood, suburb, town and city names from OpenStreetMap, for telling branches apart in search.
 
 ### Places index (DuckDB)
 
@@ -177,7 +180,7 @@ Bundled data and assets keep their own licenses:
 
 | What | License |
 | -- | -- |
-| `public/data/pois.json` and the saved route and search responses in `tests/fixtures/` | © OpenStreetMap contributors, [ODbL](https://opendatacommons.org/licenses/odbl/) |
+| `public/data/pois.json`, `signals.json`, `fuel.json`, `areas.json` and the saved route and search responses in `tests/fixtures/` | © OpenStreetMap contributors, [ODbL](https://opendatacommons.org/licenses/odbl/) |
 | `public/data/places/` (generated, not in git) | Overture Maps Foundation, [CDLA-Permissive-2.0](https://cdla.dev/permissive-2-0/) |
 | `public/fonts/` (Nunito) | [SIL Open Font License 1.1](public/fonts/OFL.txt) |
 | MapLibre GL JS, loaded from a CDN | BSD-3-Clause |

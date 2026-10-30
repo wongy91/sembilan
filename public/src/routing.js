@@ -1,4 +1,4 @@
-import { encodePolyline, slice, thin } from './geo.js';
+import { encodePolyline, pointAt, slice, thin } from './geo.js';
 import { attachLanes, laneCatalog } from './lanes.js';
 import { distinctRoutes, fromOsrm, fromTomTom, fromValhalla } from './providers.js';
 
@@ -8,6 +8,7 @@ const OSRM = 'https://router.project-osrm.org/route/v1/driving';
 const REFERENCE_POINTS = 1500;
 const FASTER_MIN_SAVING = 180;
 const FASTER_MIN_SHARE = 0.05;
+const REJOIN_AFTER = 2000;
 
 async function getJson(url, init) {
   const res = await fetch(url, init);
@@ -79,6 +80,31 @@ export function pickFaster({ current, better }) {
   if (!current || !best) return null;
   const saving = current.duration - best.duration;
   return saving >= FASTER_MIN_SAVING && saving >= current.duration * FASTER_MIN_SHARE ? { route: best, saving } : null;
+}
+
+export async function detourTimes(here, places, route, { avoidTolls, avoidHighways, heading, signal } = {}) {
+  const origin = { lon: here[0], lat: here[1] };
+  if (Number.isFinite(heading)) Object.assign(origin, { heading: Math.round(heading), heading_tolerance: 60 });
+  const stops = places.map((p) => ({ lon: p.lon, lat: p.lat }));
+  const rejoin = places.map((p) => {
+    const [lon, lat] = pointAt(route.coords, route.cum, Math.min(route.distance, p.along + REJOIN_AFTER));
+    return { lon, lat };
+  });
+  const matrix = async (sources, targets) => {
+    const json = await getJson(`${VALHALLA}/sources_to_targets`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ sources, targets, costing: 'auto', costing_options: { auto: { use_tolls: avoidTolls ? 0 : 0.5, use_highways: avoidHighways ? 0 : 1 } } }),
+      signal,
+    });
+    return json.sources_to_targets || [];
+  };
+  const [fromHere, back] = await Promise.all([matrix([origin], [...stops, ...rejoin]), matrix(stops, rejoin)]);
+  const n = places.length;
+  return places.map((_, i) => {
+    const times = [fromHere[0]?.[i]?.time, back[i]?.[i]?.time, fromHere[0]?.[n + i]?.time];
+    return times.every(Number.isFinite) ? Math.max(0, times[0] + times[1] - times[2]) : null;
+  });
 }
 
 export async function loadLanes(route, from = 0) {
