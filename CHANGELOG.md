@@ -4,6 +4,12 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.22.1] - 2026-10-31
+
+### Fixed
+
+- **Petrol on your route found almost nothing.** In 0.22.0, ⛽ while driving often said "None ahead" even with stations right in front of you (Kuchai Lama → KLCC: 0 of the 7 on the route). It now uses every petrol station on the map (OpenStreetMap) along the next 50 km of your route, and works out each detour with Valhalla, so the same drive lists 6 stations from 250 m ahead, +0 to +6 min. Stations more than a 10-minute detour away, such as ones on the other side of a highway, are left out. It also works without signal, from the app's offline copy.
+
 ## [0.22.0] - 2026-10-30
 
 ### Added
@@ -302,7 +308,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.22.0...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.22.1...HEAD
+[0.22.1]: https://github.com/wongy91/sembilan/compare/0.22.0...0.22.1
 [0.22.0]: https://github.com/wongy91/sembilan/compare/0.21.0...0.22.0
 [0.21.0]: https://github.com/wongy91/sembilan/compare/0.20.0...0.21.0
 [0.20.0]: https://github.com/wongy91/sembilan/compare/0.19.0...0.20.0
