@@ -4,6 +4,12 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.17.2] - 2026-10-30
+
+### Fixed
+
+- Searching while driving still put the search box under the status bar on iPhone. 0.17.1 didn't fix it: the cause was the navigation panel's top spacing replacing the search screen's. The search box now sits below the status bar, as it does on the home screen.
+
 ## [0.17.1] - 2026-10-30
 
 ### Fixed
@@ -252,7 +258,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.17.1...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.17.2...HEAD
+[0.17.2]: https://github.com/wongy91/sembilan/compare/0.17.1...0.17.2
 [0.17.1]: https://github.com/wongy91/sembilan/compare/0.17.0...0.17.1
 [0.17.0]: https://github.com/wongy91/sembilan/compare/0.16.0...0.17.0
 [0.16.0]: https://github.com/wongy91/sembilan/compare/0.15.2...0.16.0
