@@ -1759,6 +1759,14 @@ body.nav-alts .sheet {
     top: calc(var(--banner-bottom) + 148px);
     bottom: auto;
   }
+
+  body.nav-alts .sheet {
+    max-height: calc(100% - var(--banner-bottom) - 12px);
+  }
+
+  body.nav-alts .fab-menu {
+    display: none;
+  }
 }
 
 body[data-mode='nav'] .fab-menu {
@@ -2003,7 +2011,7 @@ body.has-results #sheet-body {
   font-size: 18px;
 }
 
-body[data-mode='nav'] .sheet {
+body[data-mode='nav']:not(.nav-alts):not(.searching) .sheet {
   touch-action: none;
 }
 
