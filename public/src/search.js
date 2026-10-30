@@ -27,6 +27,50 @@ export const isAddressLike = (query) => ADDRESS_LIKE.test(query);
 
 const withDistance = (places, near) => places.map((p) => ({ ...p, dist: near ? haversine(near, [p.lon, p.lat]) : null }));
 
+function branchesNearestFirst(places) {
+  const chains = new Map();
+  for (const p of places) {
+    const key = p.name.toLowerCase();
+    if (!chains.has(key)) chains.set(key, []);
+    chains.get(key).push(p);
+  }
+  return [...chains.values()].flatMap((chain) => chain.sort((a, b) => (a.dist ?? 0) - (b.dist ?? 0)));
+}
+
+function areaNear([lon, lat], areas) {
+  let best = null;
+  for (const [x, y, name, rank] of areas) {
+    const d = haversine([lon, lat], [x, y]);
+    if (d > (rank ? 8000 : 2500)) continue;
+    if (!best || rank < best.rank || (rank === best.rank && d < best.d)) best = { name, rank, d };
+  }
+  return best?.name || '';
+}
+
+export function nameBranches(places, areas) {
+  const otherBranch = (p) => places.some((q) => q !== p && q.name.toLowerCase() === p.name.toLowerCase() && haversine([p.lon, p.lat], [q.lon, q.lat]) >= 1000);
+  return places.map((p) => {
+    if (!otherBranch(p)) return p;
+    const area = areaNear([p.lon, p.lat], areas);
+    return area && !p.name.toLowerCase().includes(area.toLowerCase()) ? { ...p, name: `${p.name} (${area})` } : p;
+  });
+}
+
+let areaList = null;
+
+async function withBranchNames(places) {
+  const names = places.map((p) => p.name.toLowerCase());
+  if (names.every((n, i) => names.indexOf(n) === i)) return places;
+  areaList ??= fetch('data/areas.json')
+    .then((r) => r.json())
+    .then((d) => d.areas)
+    .catch(() => {
+      areaList = null;
+      return [];
+    });
+  return nameBranches(places, (await areaList) || []);
+}
+
 export function mergePlaces(first, second, limit = 8) {
   const out = [];
   for (const p of [...first, ...second]) {
@@ -77,17 +121,18 @@ export async function searchPlaces(query, { near, lang, signal, tomtom = false, 
     const tokens = tokenize(`${p.name} ${p.sub}`);
     return words.every((q) => tokens.some((t) => t.startsWith(q)));
   };
-  let list = mergePlaces([...osm.filter(full), ...pois.filter(full), ...osm.filter((p) => !full(p)), ...pois.filter((p) => !full(p))], []);
+  const found = mergePlaces([...osm.filter(full), ...pois.filter(full), ...osm.filter((p) => !full(p)), ...pois.filter((p) => !full(p))], [], Infinity);
+  let list = branchesNearestFirst(withDistance(found, near)).slice(0, 8);
   if (early) list = mergePlaces(await early, list);
   else if (tomtom && list.length < 3) list = mergePlaces(list, await remote());
   if (!list.length && failure) throw failure;
-  return withDistance(list, near);
+  return withBranchNames(withDistance(list, near));
 }
 
 export async function nearbyPlaces(cat, { near, signal, tomtom = false, label = '' } = {}) {
   if (tomtom) {
     try {
-      return withDistance(await tomtomSearch(nearParams(near, { cat }), signal), near).sort((a, b) => a.dist - b.dist);
+      return withBranchNames(withDistance(await tomtomSearch(nearParams(near, { cat }), signal), near).sort((a, b) => a.dist - b.dist));
     } catch (err) {
       if (signal?.aborted) throw err;
     }
@@ -97,9 +142,11 @@ export async function nearbyPlaces(cat, { near, signal, tomtom = false, label = 
   const res = await fetch(`${PHOTON}/api/?${params}`, { signal });
   if (!res.ok) throw new Error(`nearby ${res.status}`);
   const places = ((await res.json()).features || []).map((f) => ({ ...toPlace(f), name: f.properties?.name || label }));
-  return withDistance(places, near)
-    .filter((p) => p.dist <= NEARBY_LIMIT_M)
-    .sort((a, b) => a.dist - b.dist);
+  return withBranchNames(
+    withDistance(places, near)
+      .filter((p) => p.dist <= NEARBY_LIMIT_M)
+      .sort((a, b) => a.dist - b.dist),
+  );
 }
 
 async function photonSearch(query, { near, lang, signal }) {

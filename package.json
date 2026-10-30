@@ -19,7 +19,7 @@
   "scripts": {
     "dev": "node --no-warnings scripts/dev.mjs",
     "test": "node --no-warnings --test tests/*.test.mjs",
-    "data": "node scripts/build-plus-plazas.mjs && node scripts/build-pois.mjs && node scripts/build-signals.mjs",
+    "data": "node scripts/build-plus-plazas.mjs && node scripts/build-pois.mjs && node scripts/build-signals.mjs && node scripts/build-areas.mjs",
     "data:places": "node scripts/build-places.mjs",
     "deploy": "npx wrangler deploy"
   }

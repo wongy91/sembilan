@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isAddressLike, mergePlaces, nearbyPlaces, searchPlaces } from '../public/src/search.js';
+import { isAddressLike, mergePlaces, nameBranches, nearbyPlaces, searchPlaces } from '../public/src/search.js';
 
 const NEAR = [101.6806, 3.0905];
 const photon = (names) => ({ features: names.map((name, i) => ({ properties: { name, city: 'Kuala Lumpur' }, geometry: { coordinates: [101.68 + i / 100, 3.09] } })) });
@@ -96,4 +96,56 @@ test('places that match every word come first: OpenStreetMap, then Overture, the
     () => searchPlaces('mid valley', { near: NEAR, places: true }),
   );
   assert.deepEqual(landmark.result.map((p) => p.name), ['Mid Valley Megamall', 'Mid Valley Carpark'], 'OpenStreetMap landmarks stay above Overture businesses');
+});
+
+const AREAS = [
+  [101.6731, 3.0560, 'Bukit Jalil', 0],
+  [101.6712, 3.1310, 'Bangsar', 0],
+  [101.6858, 3.0896, 'Kuchai Lama', 0],
+  [101.6200, 3.0450, 'Puchong', 1],
+];
+
+test('branches with the same name get the neighbourhood they are in', () => {
+  const named = nameBranches(
+    [
+      { name: 'Bubble Gum Wax', lon: 101.67312, lat: 3.05233 },
+      { name: 'Bubble Gum Wax', lon: 101.67232, lat: 3.13211 },
+      { name: 'Bubble Gum Wax', lon: 101.6197, lat: 3.0442 },
+      { name: 'Bubble Gum Wax', lon: 102.25, lat: 2.19 },
+      { name: 'Bubble Gum Wax Puchong', lon: 101.6197, lat: 3.0442 },
+      { name: 'Mid Valley Megamall', lon: 101.6776, lat: 3.1178 },
+      { name: 'KLCC', lon: 101.7115, lat: 3.1586 },
+      { name: 'KLCC', lon: 101.7125, lat: 3.1561 },
+    ],
+    AREAS,
+  );
+  assert.deepEqual(named.map((p) => p.name), [
+    'Bubble Gum Wax (Bukit Jalil)',
+    'Bubble Gum Wax (Bangsar)',
+    'Bubble Gum Wax (Puchong)',
+    'Bubble Gum Wax',
+    'Bubble Gum Wax Puchong',
+    'Mid Valley Megamall',
+    'KLCC',
+    'KLCC',
+  ], 'a neighbourhood within 2.5 km, else a town within 8 km, else unchanged; unique names, and points of one place under 1 km apart, are left alone');
+});
+
+test('branches of one chain come nearest first, with their neighbourhood; other names keep their order', async () => {
+  const feature = (name, street, lon, lat) => ({ properties: { name, street, city: 'Kuala Lumpur' }, geometry: { coordinates: [lon, lat] } });
+  const { result } = await withFetch(
+    (url) =>
+      url.includes('data/areas.json')
+        ? json({ areas: AREAS })
+        : url.startsWith('/api/places')
+          ? json({ results: [{ name: 'Bubble Gum Wax', sub: 'Persiaran Jalil Utama, Petaling', category: '', lon: 101.67312, lat: 3.05233 }] })
+          : json({ features: [feature('Bubble Gum Wax', 'Persiaran Utara', 101.6928, 2.9317), feature('Bubble Gum Wax', 'Jalan Maarof', 101.67232, 3.13211), feature('Bubble Gum Wax Puchong', 'Jalan Kenari 1', 101.6197, 3.0442)] }),
+    () => searchPlaces('bubble gum wax', { near: NEAR, places: true }),
+  );
+  assert.deepEqual(result.map((p) => `${p.name} ${(p.dist / 1000).toFixed(1)} km`), [
+    'Bubble Gum Wax (Bukit Jalil) 4.3 km',
+    'Bubble Gum Wax (Bangsar) 4.7 km',
+    'Bubble Gum Wax 17.7 km',
+    'Bubble Gum Wax Puchong 8.5 km',
+  ]);
 });
