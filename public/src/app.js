@@ -630,7 +630,7 @@ function showResults(items) {
 const searchCache = new Map();
 const cacheKey = (query) => `${getLang()}|${query.toLowerCase()}`;
 
-function localMatches(query) {
+function localMatches(query, limit = 3) {
   const q = query.toLowerCase();
   const saved = ['home', 'work'].filter((k) => settings[k]).map((k) => ({ ...settings[k], tag: k }));
   const favs = settings.saved.map((s) => ({ name: s.label, sub: s.label !== s.name ? s.name : s.sub, lon: s.lon, lat: s.lat, tag: 'saved' }));
@@ -643,8 +643,14 @@ function localMatches(query) {
       seen.add(key);
       return true;
     })
-    .slice(0, 3)
+    .slice(0, limit)
     .map((p) => ({ ...p, local: true }));
+}
+
+function showPlaces() {
+  const places = localMatches('', Infinity);
+  if (places.length) showResults(places);
+  else hideResults();
 }
 
 function showMerged(local, remote, empty) {
@@ -1489,7 +1495,7 @@ function bindUi() {
       $('q').value = '';
       return endSearch();
     }
-    if (query.length < 2) return hideResults();
+    if (query.length < 2) return state.navSearch ? showPlaces() : hideResults();
     const local = localMatches(query);
     const cached = searchCache.get(cacheKey(query));
     if (cached) return showMerged(local, cached, 'noResults');
@@ -1689,6 +1695,7 @@ function bindUi() {
       case 'nav-search':
         state.navSearch = true;
         render();
+        showPlaces();
         return $('q').focus();
       case 'more':
         if (Date.now() - (state.swipedAt || 0) < 400) return;
