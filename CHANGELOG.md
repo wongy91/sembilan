@@ -4,6 +4,12 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-10-31
+
+### Changed
+
+- **Toll stretches are jade instead of yellow dashes**: the part of your route on a toll road is now a calm jade green, blending smoothly from the blue over 150 m where it starts and ends, with a small TOL label where it begins and every kilometre. The yellow dashes were distracting and looked like slow traffic next to the orange jam band. It works the same on the route-choice screen and at night.
+
 ## [0.26.1] - 2026-10-31
 
 ### Changed
@@ -354,7 +360,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.26.1...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.27.0...HEAD
+[0.27.0]: https://github.com/wongy91/sembilan/compare/0.26.1...0.27.0
 [0.26.1]: https://github.com/wongy91/sembilan/compare/0.26.0...0.26.1
 [0.26.0]: https://github.com/wongy91/sembilan/compare/0.25.1...0.26.0
 [0.25.1]: https://github.com/wongy91/sembilan/compare/0.25.0...0.25.1
