@@ -131,26 +131,65 @@ function missTurn(route, nav, { speed = 14, heading = null } = {}) {
   return null;
 }
 
-test('a missed turn is caught on the second fix that heads away from the route', () => {
+test('a missed turn is caught once three fixes head away from the route', () => {
   const [route] = fromValhalla(fixture('valhalla_klcc_midvalley.json'));
   const seconds = missTurn(route, new Navigator(route));
   assert.ok(seconds != null && seconds <= 5, `rerouted ${seconds} s after the turn`);
 });
 
-test('drifting off the line while heading the same way still waits 4 seconds', () => {
+function beside(route, along, metres) {
+  const p = pointAt(route.coords, route.cum, along);
+  const side = ((bearingAt(route.coords, route.cum, along) + 90) * Math.PI) / 180;
+  return [p[0] + (metres * Math.sin(side)) / (111320 * Math.cos((p[1] * Math.PI) / 180)), p[1] + (metres * Math.cos(side)) / 110574];
+}
+
+function offFixes(route, nav, { from, n, step = 10, metres, speed = 10, turn = 0 }) {
+  const offs = [];
+  for (let i = 0; i < n; i++) {
+    const along = from + i * step;
+    const [lon, lat] = beside(route, along, typeof metres === 'function' ? metres(i) : metres);
+    const heading = (bearingAt(route.coords, route.cum, along) + turn * (i % 2 ? 1 : -1) + 360) % 360;
+    offs.push(nav.update({ lon, lat, accuracy: 5, speed, heading, time: 2000000 + i * 1000 }).offRoute);
+  }
+  return offs;
+}
+
+test('staying 60 m beside the route, as GPS drift does, waits 10 seconds before rerouting', () => {
   const [route] = fromValhalla(fixture('valhalla_putrajaya.json'));
   const nav = new Navigator(route);
   drive(route, nav, { until: 1000 });
-  const offs = [];
-  for (let i = 0; i < 8; i++) {
-    const along = 1000 + i * 10;
-    const p = pointAt(route.coords, route.cum, along);
-    const h = bearingAt(route.coords, route.cum, along);
-    const side = ((h + 90) * Math.PI) / 180;
-    const q = [p[0] + (60 * Math.sin(side)) / (111320 * Math.cos((p[1] * Math.PI) / 180)), p[1] + (60 * Math.cos(side)) / 110574];
-    offs.push(nav.update({ lon: q[0], lat: q[1], accuracy: 5, speed: 10, heading: h, time: 2000000 + i * 1000 }).offRoute);
-  }
-  assert.equal(offs.indexOf(true), 4, 'third off fix and 4 s after the first');
+  assert.equal(offFixes(route, nav, { from: 1000, n: 12, metres: 60 }).indexOf(true), 10);
+});
+
+test('drifting away from the route steadily is still caught after 4 seconds', () => {
+  const [route] = fromValhalla(fixture('valhalla_putrajaya.json'));
+  const nav = new Navigator(route);
+  drive(route, nav, { until: 1000 });
+  assert.equal(offFixes(route, nav, { from: 1000, n: 8, metres: (i) => 50 + i * 8 }).indexOf(true), 4);
+});
+
+test('GPS drift with a wobbling heading in slow traffic does not reroute', () => {
+  const [route] = fromValhalla(fixture('valhalla_putrajaya.json'));
+  const nav = new Navigator(route);
+  drive(route, nav, { until: 1000 });
+  const offs = offFixes(route, nav, { from: 1000, n: 9, step: 7, speed: 7, turn: 40, metres: (i) => 50 + (i % 3) * 6 });
+  assert.equal(offs.indexOf(true), -1);
+});
+
+test('a GPS jump while stopped in a jam does not reroute', () => {
+  const [route] = fromValhalla(fixture('valhalla_putrajaya.json'));
+  const nav = new Navigator(route);
+  drive(route, nav, { until: 1000 });
+  assert.equal(offFixes(route, nav, { from: 1000, n: 30, step: 0, speed: 0.5, metres: 70 }).indexOf(true), -1);
+});
+
+test('driving through a wide toll plaza, 70 m from the route line, does not reroute', () => {
+  const [route] = fromValhalla(fixture('valhalla_kl_ipoh.json'));
+  const found = poisAlongRoute(route, pois);
+  const plaza = found.find((p) => p.kind === 'toll' && p.along > 20000);
+  const nav = new Navigator(route, { pois: found });
+  drive(route, nav, { until: plaza.along - 250 });
+  assert.equal(offFixes(route, nav, { from: plaza.along - 200, n: 40, step: 10, speed: 5, metres: 70 }).indexOf(true), -1);
 });
 
 test('after a reroute, the first instruction of the new route is spoken once, queued behind "Rerouting"', () => {

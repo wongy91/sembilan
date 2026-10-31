@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { bearing, cumulative, decodePolyline, encodePolyline, haversine, locate, pointAt, sideOf, slice } from '../public/src/geo.js';
-import { instruction, spokenDistance, withDistance } from '../public/src/instructions.js';
+import { instruction, maneuverIcon, spokenDistance, withDistance } from '../public/src/instructions.js';
 import { fromOsrm, fromTomTom, fromValhalla, distinctRoutes } from '../public/src/providers.js';
 import { poisAlongRoute, reportPois, summarize } from '../public/src/pois.js';
 import { fmtDistance, fmtDuration } from '../public/src/i18n.js';
@@ -135,6 +135,26 @@ test('normalizes TomTom routing (synthetic response shaped like the documented s
   nav.update({ lon: 101.7, lat: 3.165, accuracy: 5, speed: 10, heading: 0, time: 0 });
   assert.equal(nav.progress().speedLimit, 60);
   assert.equal(instruction(route.steps[2], 'ms'), 'Di bulatan, ambil jalan keluar kedua');
+});
+
+test('a TomTom exit takes its side from the turn angle, so the arrow points the way out', () => {
+  const pts = [[101.70, 3.15], [101.70, 3.16], [101.70, 3.17], [101.71, 3.18]];
+  const exit = (turnAngleInDecimalDegrees) => fromTomTom({
+    routes: [{
+      summary: { lengthInMeters: 3500, travelTimeInSeconds: 300 },
+      legs: [{ points: pts.map(([lon, lat]) => ({ latitude: lat, longitude: lon })) }],
+      guidance: {
+        instructions: [
+          { maneuver: 'DEPART', pointIndex: 0, travelTimeInSeconds: 0 },
+          { maneuver: 'TAKE_EXIT', junctionType: 'REGULAR', turnAngleInDecimalDegrees, exitNumber: '231', street: 'Ayer Keroh Interchange', pointIndex: 2, travelTimeInSeconds: 200 },
+          { maneuver: 'ARRIVE', pointIndex: 3, travelTimeInSeconds: 300 },
+        ],
+      },
+    }],
+  })[0].steps[1];
+  assert.equal(maneuverIcon(exit(-45)), 'fork-left');
+  assert.equal(maneuverIcon(exit(45)), 'fork-right');
+  assert.equal(maneuverIcon(exit(undefined)), 'straight');
 });
 
 test('finds toll plazas, cameras and R&R along KL to Ipoh', () => {

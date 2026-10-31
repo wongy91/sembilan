@@ -7,7 +7,7 @@ import { Navigator, SPEEDING_MARGIN, timeLeft } from './navigator.js';
 import { bannerOf, maneuverIcon, roadName } from './instructions.js';
 import { fuelAlongRoute, poisAlongRoute, reportPois, summarize, trafficPois } from './pois.js';
 import { attachFares, fareGroups, fareKeys, fetchFares, priceRoute } from './fares.js';
-import { bbox, bearing, haversine, locate, pointAt } from './geo.js';
+import { bbox, bearing, bearingAt, haversine, locate, pointAt } from './geo.js';
 import { REPORT_ICON, REPORT_KINDS, fetchReports, health, postReport, voteReport } from './reports.js';
 import { simulate } from './sim.js';
 import { MANEUVER, UI, laneIcon } from './icons.js';
@@ -1086,7 +1086,8 @@ function navTick(fix) {
   const progress = out.progress;
   checkStop(nav, progress, fix);
   const position = progress.snapped || [fix.lon, fix.lat];
-  map.driveTo(position, fix.heading, fix.speed ?? 0);
+  const heading = progress.snapped ? bearingAt(nav.route.coords, nav.route.cum, progress.along) : fix.heading;
+  map.driveTo(position, heading, fix.speed ?? 0);
   if (!nav.lineAt || (performance.now() - nav.lineAt > 1000 && Math.abs(progress.along - nav.lineAlong) > 20)) drawNavRoutes(nav, progress.along);
   updateBanner(progress);
   if (progress.along > nav.lanesTo - 20000 && nav.lanesTo < nav.route.distance) fetchNavLanes(nav, progress.along);

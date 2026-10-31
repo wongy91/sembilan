@@ -6,6 +6,10 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 export const SPEEDING_MARGIN = 5;
 const SPEEDING_QUIET = 60000;
 const TURNED_AWAY = 35;
+const STOPPED = 2;
+const PLAZA = 300;
+const PLAZA_TOLERANCE = 90;
+const STAYED_OFF = 10000;
 
 function timeAfter(route, index, along) {
   const steps = route.steps;
@@ -36,6 +40,7 @@ export class Navigator {
     this.alerted = new Set();
     this.offCount = 0;
     this.offSince = null;
+    this.offDist = null;
     this.rerouteRequested = false;
     this.lastOnTime = null;
     this.arrived = false;
@@ -52,6 +57,7 @@ export class Navigator {
   resetOffRoute() {
     this.offCount = 0;
     this.offSince = null;
+    this.offDist = null;
     this.rerouteRequested = false;
   }
 
@@ -77,7 +83,8 @@ export class Navigator {
     const p = [fix.lon, fix.lat];
     const speed = Number.isFinite(fix.speed) && fix.speed >= 0 ? fix.speed : null;
     const v = Math.max(speed ?? 0, 8);
-    const tol = clamp((Number.isFinite(fix.accuracy) ? fix.accuracy : 15) + 25, 40, 90);
+    const atPlaza = this.pois.some((q) => q.kind === 'toll' && Math.abs(q.along - this.along) < PLAZA);
+    const tol = atPlaza ? PLAZA_TOLERANCE : clamp((Number.isFinite(fix.accuracy) ? fix.accuracy : 15) + 25, 40, 90);
 
     const windowEnd = indexAt(r.cum, this.along + Math.max(1500, v * 60)) + 1;
     let loc = locate(r.coords, r.cum, p, Math.max(0, this.segIndex - 3), windowEnd);
@@ -93,10 +100,19 @@ export class Navigator {
       if (b && haversine(a, b) > 3 && angleDiff(fix.heading, bearing(a, b)) > 110) wrongWay = true;
     }
     if (loc.dist > tol || wrongWay) {
+      if (speed !== null && speed < STOPPED) {
+        out.progress = this.progress(loc, true);
+        return out;
+      }
       this.offCount++;
       this.offSince ??= fix.time;
+      this.offDist ??= loc.dist;
+      const elapsed = fix.time - this.offSince;
+      const away = loc.dist - this.offDist;
       const turnedAway = !wrongWay && speed !== null && speed > 5 && Number.isFinite(fix.heading) && angleDiff(fix.heading, bearingAt(r.coords, r.cum, loc.along)) > TURNED_AWAY;
-      const confirmed = turnedAway ? this.offCount >= 2 && fix.time - this.offSince >= 1000 : this.offCount >= 3 && fix.time - this.offSince >= 4000;
+      const clear = wrongWay || away >= 20 || loc.dist > 2 * tol;
+      const confirmed =
+        this.offCount >= 3 && ((turnedAway && away >= 15 && elapsed >= 2000) || (clear && elapsed >= 4000) || elapsed >= STAYED_OFF);
       if (!this.rerouteRequested && confirmed) {
         this.rerouteRequested = true;
         out.offRoute = true;
@@ -106,6 +122,7 @@ export class Navigator {
     }
     this.offCount = 0;
     this.offSince = null;
+    this.offDist = null;
     this.lastOnTime = fix.time;
     this.segIndex = loc.index;
     this.along = loc.along >= this.along - 50 ? Math.max(this.along, loc.along) : loc.along;

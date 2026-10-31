@@ -297,7 +297,8 @@ function tomtomRoute(r) {
   const at = (i) => cum[Math.max(0, Math.min(last, i ?? 0))];
   const ins = r.guidance?.instructions || [];
   const steps = ins.map((x, i) => {
-    const [kind, modifier = null] = TOMTOM[x.maneuver] || ['continue', 'straight'];
+    let [kind, modifier = null] = TOMTOM[x.maneuver] || ['continue', 'straight'];
+    if (!modifier && (kind === 'exit' || kind === 'ramp') && x.turnAngleInDecimalDegrees) modifier = x.turnAngleInDecimalDegrees < 0 ? 'left' : 'right';
     const end = kind === 'arrive' || kind === 'waypoint';
     const next = ins[i + 1];
     return step({
