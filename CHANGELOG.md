@@ -4,6 +4,12 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-10-31
+
+### Changed
+
+- **Speed cameras are much harder to miss**: the warning now comes about 1 km ahead (35 seconds at your speed) instead of about 600 m. The camera card stays on screen and counts down until you pass the camera, and turns red while you're over its limit. On the way you hear a soft tick every 100 m, then every 50 m in the last 300 m, like a parking sensor; over the limit, each tick becomes a sharp double beep. The ticks follow the distance you drive, not the clock, so they go quiet when you're stuck in a jam.
+
 ## [0.27.2] - 2026-10-31
 
 ### Fixed
@@ -372,7 +378,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.27.2...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.28.0...HEAD
+[0.28.0]: https://github.com/wongy91/sembilan/compare/0.27.2...0.28.0
 [0.27.2]: https://github.com/wongy91/sembilan/compare/0.27.1...0.27.2
 [0.27.1]: https://github.com/wongy91/sembilan/compare/0.27.0...0.27.1
 [0.27.0]: https://github.com/wongy91/sembilan/compare/0.26.1...0.27.0
