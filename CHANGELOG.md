@@ -4,6 +4,12 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.26.1] - 2026-10-31
+
+### Changed
+
+- **The road you've driven stays on the map, faded**: while navigating, the route behind the car is now drawn as a faded blue line instead of disappearing, like Waze's trail.
+
 ## [0.26.0] - 2026-10-31
 
 ### Changed
@@ -348,7 +354,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.26.0...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.26.1...HEAD
+[0.26.1]: https://github.com/wongy91/sembilan/compare/0.26.0...0.26.1
 [0.26.0]: https://github.com/wongy91/sembilan/compare/0.25.1...0.26.0
 [0.25.1]: https://github.com/wongy91/sembilan/compare/0.25.0...0.25.1
 [0.25.0]: https://github.com/wongy91/sembilan/compare/0.24.0...0.25.0
