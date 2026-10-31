@@ -4,6 +4,12 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.27.1] - 2026-10-31
+
+### Fixed
+
+- **A traffic light was highlighted on a free-left slip road** that skips the junction. Only lights the route actually drives through are highlighted now: within 5 m of the route line instead of 20 m. Across four test drives, wrong highlights dropped from 10 to 2. The trade-off is that 3 of 19 junctions where the light is mapped a little away from the road are no longer highlighted.
+
 ## [0.27.0] - 2026-10-31
 
 ### Changed
@@ -360,7 +366,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.27.0...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.27.1...HEAD
+[0.27.1]: https://github.com/wongy91/sembilan/compare/0.27.0...0.27.1
 [0.27.0]: https://github.com/wongy91/sembilan/compare/0.26.1...0.27.0
 [0.26.1]: https://github.com/wongy91/sembilan/compare/0.26.0...0.26.1
 [0.26.0]: https://github.com/wongy91/sembilan/compare/0.25.1...0.26.0
