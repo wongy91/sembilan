@@ -177,21 +177,23 @@ test('a toll stretch blends from blue to jade and back over 150 m, with TOL ever
   assert.equal(labels(1000).length, 1);
 });
 
-test('marks one traffic light per junction the route drives through', () => {
+test('marks one traffic light per junction the route drives through, not lights beside a slip road', () => {
   const coords = [[101.7, 3.15], [101.7, 3.16]];
-  const route = { coords, cum: cumulative(coords) };
+  const east = (m) => 101.7 + m / 111140;
+  const tomtom = { provider: 'tomtom', coords, cum: cumulative(coords) };
+  const valhalla = { ...tomtom, provider: 'valhalla' };
   const flat = [
     101.7, 3.152,
-    101.70014, 3.15205,
-    101.70027, 3.1521,
-    101.7001, 3.1551,
-    101.7, 3.155,
+    east(2), 3.15218,
+    east(7.6), 3.155,
+    east(4), 3.158,
+    east(15), 3.159,
     101.75, 3.155,
   ];
-  const found = signalsAlongRoute(route, flat);
-  assert.deepEqual(found.map((s) => [s.lon, s.lat]), [[101.7, 3.152], [101.7, 3.155]]);
-  assert.ok(found[0].along < found[1].along);
-  assert.deepEqual(signalsAlongRoute(route, null), []);
+  const shown = (route) => signalsAlongRoute(route, flat).map((s) => [+s.lon.toFixed(6), s.lat]);
+  assert.deepEqual(shown(tomtom), [[101.7, 3.152], [+east(4).toFixed(6), 3.158]], 'within 5 m of a TomTom route, one per junction; 7.6 m away is a slip road');
+  assert.deepEqual(shown(valhalla), [[101.7, 3.152]], 'OSM-based routes run on the same nodes as the lights, so 3 m');
+  assert.deepEqual(signalsAlongRoute(tomtom, null), []);
 });
 
 test('finds toll plazas, cameras and R&R along KL to Ipoh', () => {
