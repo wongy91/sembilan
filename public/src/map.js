@@ -10,6 +10,7 @@ export const KL = [101.6869, 3.139];
 export const SIGNAL_ZOOM = 15.5;
 const SIGNAL_BEHIND = 15;
 const SIGNAL_DIM = 0.3;
+const PASSED_OPACITY = 0.4;
 const STATION_NAME = ['downcase', ['coalesce', ['get', 'name'], '']];
 const brandOf = (brands) => ['case', ...brands.flatMap(([words, brand]) => [['any', ...words.map((w) => ['in', w, STATION_NAME])], brand]), ''];
 const stationLabel = (brand) => ['step', ['zoom'], brand, 16, ['case', ['!=', brand, ''], brand, ['coalesce', ['get', 'name'], '']]];
@@ -195,7 +196,7 @@ export class MapView {
     this.night = night;
     this.threeD = threeD;
     this.handlers = handlers;
-    this.data = { routes: EMPTY, toll: EMPTY, traffic: EMPTY };
+    this.data = { routes: EMPTY, passed: EMPTY, toll: EMPTY, traffic: EMPTY };
     this.trafficOn = false;
     this.styled = false;
     this.poiMarkers = [];
@@ -304,7 +305,7 @@ export class MapView {
     applyPalette(m, this.night);
     declutter(m);
     const before = overlayAnchor(m.getStyle());
-    for (const id of ['sb-routes', 'sb-toll', 'sb-traffic']) {
+    for (const id of ['sb-routes', 'sb-passed', 'sb-toll', 'sb-traffic']) {
       if (!m.getSource(id)) m.addSource(id, { type: 'geojson', data: this.data[id.slice(3)] });
     }
     if (this.night && !m.getLayer('sb-3d')) {
@@ -329,6 +330,8 @@ export class MapView {
     const add = (layer) => !m.getLayer(layer.id) && m.addLayer(layer, before);
     const c = ROUTE_COLORS[this.night ? 'night' : 'day'];
     const selected = ['get', 'selected'];
+    add({ id: 'sb-passed-casing', type: 'line', source: 'sb-passed', layout: LINE, paint: { 'line-color': c.casing, 'line-width': width(1, 2.5), 'line-opacity': PASSED_OPACITY } });
+    add({ id: 'sb-passed', type: 'line', source: 'sb-passed', layout: LINE, paint: { 'line-color': c.main, 'line-width': width(), 'line-opacity': PASSED_OPACITY } });
     add({ id: 'sb-routes-alt', type: 'line', source: 'sb-routes', filter: ['!', selected], layout: LINE, paint: { 'line-color': c.alt, 'line-width': width(0.75), 'line-opacity': 0.9 } });
     add({ id: 'sb-routes-glow', type: 'line', source: 'sb-routes', filter: selected, layout: LINE, paint: { 'line-color': c.glow, 'line-width': width(1, 6), 'line-blur': width(0.4), 'line-opacity': this.night ? 0.3 : 0.15 } });
     add({ id: 'sb-traffic-edge', type: 'line', source: 'sb-traffic', layout: LINE, paint: { 'line-color': '#7a271a', 'line-width': width(1, 10) } });
@@ -480,6 +483,7 @@ export class MapView {
     features.sort((a, b) => Number(a.properties.selected) - Number(b.properties.selected));
     this.update('routes', { type: 'FeatureCollection', features });
     const route = routes[selected];
+    this.update('passed', route && along > 0 ? { type: 'FeatureCollection', features: [line(slice(route.coords, route.cum, 0, along))] } : EMPTY);
     const sections = (list) =>
       route
         ? list
@@ -492,7 +496,7 @@ export class MapView {
   }
 
   clearRoutes() {
-    for (const id of ['routes', 'toll', 'traffic']) this.update(id, EMPTY);
+    for (const id of ['routes', 'passed', 'toll', 'traffic']) this.update(id, EMPTY);
     this.setPois([]);
   }
 
