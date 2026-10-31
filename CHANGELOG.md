@@ -4,6 +4,18 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-10-31
+
+### Changed
+
+- **Jams on your route look like Waze**: the blue route line now stays on top, with an orange or red band around it where traffic is slow. Before, the jam colour covered the route and only a thin blue edge was left, which was hard to see on yellow highways.
+- **Fewer unnecessary reroutes**: the app now waits until you're actually moving away from the route. GPS drift beside the road, a GPS jump while you're stopped in a jam, and driving through a wide toll plaza no longer reroute you. A real missed turn still reroutes in about 5 seconds at 50 km/h (4 before).
+- **Steadier car arrow**: while you're on the route, the arrow and the map turn with the road instead of with every small GPS wobble. With the GPS heading swinging ±12°, the arrow used to tilt 8 to 12° off the road; now it stays within 1°.
+
+### Fixed
+
+- **Highway exits showed a straight arrow** with live traffic on, for example "Take the exit" for Exit 231 Ayer Keroh. They now show which side the exit is on: a left-exit arrow and "Take the exit on the left".
+
 ## [0.24.0] - 2026-10-31
 
 ### Added
@@ -324,7 +336,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.24.0...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.25.0...HEAD
+[0.25.0]: https://github.com/wongy91/sembilan/compare/0.24.0...0.25.0
 [0.24.0]: https://github.com/wongy91/sembilan/compare/0.23.0...0.24.0
 [0.23.0]: https://github.com/wongy91/sembilan/compare/0.22.1...0.23.0
 [0.22.1]: https://github.com/wongy91/sembilan/compare/0.22.0...0.22.1
