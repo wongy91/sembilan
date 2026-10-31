@@ -4,6 +4,12 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.25.1] - 2026-10-31
+
+### Changed
+
+- **Thinner traffic band**: the orange or red band around your route is now a thin edge, about 3 px each side instead of 7, so the blue route stays the main thing you see.
+
 ## [0.25.0] - 2026-10-31
 
 ### Changed
@@ -336,7 +342,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.25.0...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.25.1...HEAD
+[0.25.1]: https://github.com/wongy91/sembilan/compare/0.25.0...0.25.1
 [0.25.0]: https://github.com/wongy91/sembilan/compare/0.24.0...0.25.0
 [0.24.0]: https://github.com/wongy91/sembilan/compare/0.23.0...0.24.0
 [0.23.0]: https://github.com/wongy91/sembilan/compare/0.22.1...0.23.0
