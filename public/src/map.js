@@ -8,6 +8,8 @@ const STYLES = {
 };
 export const KL = [101.6869, 3.139];
 export const SIGNAL_ZOOM = 15.5;
+const SIGNAL_BEHIND = 15;
+const SIGNAL_DIM = 0.3;
 const STATION_NAME = ['downcase', ['coalesce', ['get', 'name'], '']];
 const brandOf = (brands) => ['case', ...brands.flatMap(([words, brand]) => [['any', ...words.map((w) => ['in', w, STATION_NAME])], brand]), ''];
 const stationLabel = (brand) => ['step', ['zoom'], brand, 16, ['case', ['!=', brand, ''], brand, ['coalesce', ['get', 'name'], '']]];
@@ -378,6 +380,20 @@ export class MapView {
     if (this.styled) this.addSignals(overlayAnchor(this.map.getStyle()));
   }
 
+  setRouteSignals(list) {
+    this.routeSignals = list && {
+      type: 'FeatureCollection',
+      features: list.map(({ lon, lat, along }) => ({ type: 'Feature', properties: { along }, geometry: { type: 'Point', coordinates: [lon, lat] } })),
+    };
+    this.signalsPassed = 0;
+    if (this.styled) this.addSignals(overlayAnchor(this.map.getStyle()));
+  }
+
+  passSignals(along) {
+    this.signalsPassed = along;
+    if (this.map.getLayer('sb-signals-route')) this.map.setFilter('sb-signals-route', ['>=', ['get', 'along'], along - SIGNAL_BEHIND]);
+  }
+
   addSignals(before) {
     const m = this.map;
     if (!this.signals) return;
@@ -389,6 +405,23 @@ export class MapView {
         before,
       );
     }
+    const route = this.routeSignals || EMPTY;
+    if (m.getSource('sb-signals-route')) m.getSource('sb-signals-route').setData(route);
+    else m.addSource('sb-signals-route', { type: 'geojson', data: route });
+    if (!m.getLayer('sb-signals-route')) {
+      m.addLayer(
+        {
+          id: 'sb-signals-route',
+          type: 'symbol',
+          source: 'sb-signals-route',
+          minzoom: SIGNAL_ZOOM - 1,
+          filter: ['>=', ['get', 'along'], (this.signalsPassed || 0) - SIGNAL_BEHIND],
+          layout: { 'icon-image': 'sb-signal', 'icon-size': ['interpolate', ['linear'], ['zoom'], SIGNAL_ZOOM - 1, 0.9, 18, 1.35], 'icon-allow-overlap': true, 'icon-padding': 0 },
+        },
+        before,
+      );
+    }
+    m.setPaintProperty('sb-signals', 'icon-opacity', this.routeSignals ? SIGNAL_DIM : 1);
   }
 
   addTrafficLayer(before) {

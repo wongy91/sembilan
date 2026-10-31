@@ -5,7 +5,7 @@ import { nearbyPlaces, reversePlace, searchPlaces, withBranchNames } from './sea
 import { detourTimes, fasterRoute, loadLanes, pickFaster, planRoutes } from './routing.js';
 import { Navigator, SPEEDING_MARGIN, timeLeft } from './navigator.js';
 import { bannerOf, maneuverIcon, roadName } from './instructions.js';
-import { fuelAlongRoute, poisAlongRoute, reportPois, summarize, trafficPois } from './pois.js';
+import { fuelAlongRoute, poisAlongRoute, reportPois, signalsAlongRoute, summarize, trafficPois } from './pois.js';
 import { attachFares, fareGroups, fareKeys, fetchFares, priceRoute } from './fares.js';
 import { bbox, bearing, bearingAt, haversine, locate, pointAt } from './geo.js';
 import { REPORT_ICON, REPORT_KINDS, fetchReports, health, postReport, voteReport } from './reports.js';
@@ -926,6 +926,7 @@ function startNav(simulated) {
   map.showPin([state.place.lon, state.place.lat]);
   map.showRoutes([route], 0);
   map.setPois(basePois);
+  showRouteSignals(state.nav);
   $('banner').hidden = false;
   $('speedo').hidden = false;
   $('btn-report').hidden = !state.backend.reports;
@@ -954,6 +955,7 @@ function finishNav(arrived) {
   clearOffer(nav);
   hideParking(nav);
   map.showStop(null);
+  map.setRouteSignals(null);
   releaseWakeLock();
   if (!arrived) voice.stop();
   state.nav = null;
@@ -1108,6 +1110,7 @@ function navTick(fix) {
 
 function drawNavRoutes(nav, along = nav.navigator.progress().along) {
   map.showRoutes([nav.route, ...(nav.alts?.list?.slice(1).map((a) => a.route) || []), ...(nav.offer ? [nav.offer.route] : [])], 0, along);
+  map.passSignals(along);
   nav.lineAt = performance.now();
   nav.lineAlong = along;
 }
@@ -1127,6 +1130,7 @@ function useRoute(nav, route, announce = false) {
   nav.navigator = new Navigator(route, { lang: getLang(), pois: nav.pois, resumed: true, announce });
   state.routes = [route];
   map.setPois(nav.pois);
+  showRouteSignals(nav);
   if (nav.simulated) {
     nav.stopSim?.();
     nav.stopSim = simulate(route, handleFix, { speedup: 3 });
@@ -1520,12 +1524,26 @@ function closeRecentMenu() {
   if (document.body.classList.contains('searching')) $('q').dispatchEvent(new Event('input'));
 }
 
-function loadSignals() {
-  if (state.signals || map.map.getZoom() < SIGNAL_ZOOM - 1) return;
-  state.signals = fetch('data/signals.json')
+function signalData() {
+  state.signals ??= fetch('data/signals.json')
     .then((r) => r.json())
-    .then((data) => map.setSignals(data.signals))
+    .then((data) => {
+      map.setSignals(data.signals);
+      return data.signals;
+    })
     .catch(() => (state.signals = null));
+  return state.signals;
+}
+
+function loadSignals() {
+  if (map.map.getZoom() >= SIGNAL_ZOOM - 1) signalData();
+}
+
+function showRouteSignals(nav) {
+  const route = nav.route;
+  signalData().then((flat) => {
+    if (state.nav === nav && nav.route === route) map.setRouteSignals(signalsAlongRoute(route, flat));
+  });
 }
 
 function checkForUpdate() {

@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { bearing, cumulative, decodePolyline, encodePolyline, haversine, locate, pointAt, sideOf, slice } from '../public/src/geo.js';
 import { instruction, maneuverIcon, spokenDistance, withDistance } from '../public/src/instructions.js';
 import { fromOsrm, fromTomTom, fromValhalla, distinctRoutes } from '../public/src/providers.js';
-import { poisAlongRoute, reportPois, summarize } from '../public/src/pois.js';
+import { poisAlongRoute, reportPois, signalsAlongRoute, summarize } from '../public/src/pois.js';
 import { fmtDistance, fmtDuration } from '../public/src/i18n.js';
 import { Navigator } from '../public/src/navigator.js';
 
@@ -155,6 +155,23 @@ test('a TomTom exit takes its side from the turn angle, so the arrow points the 
   assert.equal(maneuverIcon(exit(-45)), 'fork-left');
   assert.equal(maneuverIcon(exit(45)), 'fork-right');
   assert.equal(maneuverIcon(exit(undefined)), 'straight');
+});
+
+test('marks one traffic light per junction the route drives through', () => {
+  const coords = [[101.7, 3.15], [101.7, 3.16]];
+  const route = { coords, cum: cumulative(coords) };
+  const flat = [
+    101.7, 3.152,
+    101.70014, 3.15205,
+    101.70027, 3.1521,
+    101.7001, 3.1551,
+    101.7, 3.155,
+    101.75, 3.155,
+  ];
+  const found = signalsAlongRoute(route, flat);
+  assert.deepEqual(found.map((s) => [s.lon, s.lat]), [[101.7, 3.152], [101.7, 3.155]]);
+  assert.ok(found[0].along < found[1].along);
+  assert.deepEqual(signalsAlongRoute(route, null), []);
 });
 
 test('finds toll plazas, cameras and R&R along KL to Ipoh', () => {
