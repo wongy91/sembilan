@@ -4,6 +4,12 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.27.2] - 2026-10-31
+
+### Fixed
+
+- **The wrong traffic light was highlighted when turning across a dual carriageway.** The route passes two lights there: the one you stop at, then the other carriageway's a few metres later. The app now highlights the first one, where you actually wait, instead of whichever sat closer to the route line.
+
 ## [0.27.1] - 2026-10-31
 
 ### Fixed
@@ -366,7 +372,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.27.1...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.27.2...HEAD
+[0.27.2]: https://github.com/wongy91/sembilan/compare/0.27.1...0.27.2
 [0.27.1]: https://github.com/wongy91/sembilan/compare/0.27.0...0.27.1
 [0.27.0]: https://github.com/wongy91/sembilan/compare/0.26.1...0.27.0
 [0.26.1]: https://github.com/wongy91/sembilan/compare/0.26.0...0.26.1
