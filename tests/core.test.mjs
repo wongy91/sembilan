@@ -168,6 +168,17 @@ test('at a dual-carriageway junction, the light you stop at is the one marked, n
   assert.equal(rest.length, 0);
 });
 
+test('the stop line a few metres off the line is marked when the route goes through the junction', () => {
+  const coords = [[101.7, 3.15], [101.7, 3.16], [101.71, 3.16]];
+  const route = { provider: 'tomtom', coords, cum: cumulative(coords) };
+  const stopLine = [101.699949, 3.159593];
+  const turn = [101.7, 3.16];
+  const farCarriageway = [101.70014, 3.16001];
+  const otherDirection = [101.700123, 3.159593];
+  const shown = signalsAlongRoute(route, [...turn, ...farCarriageway, ...otherDirection, ...stopLine]);
+  assert.deepEqual(shown.map((s) => [s.lon, s.lat]), [stopLine]);
+});
+
 test('a toll stretch blends from blue to jade and back over 150 m, with TOL every kilometre', () => {
   const coords = [[101.7, 3.15], [101.7, 3.17]];
   const cum = cumulative(coords);
