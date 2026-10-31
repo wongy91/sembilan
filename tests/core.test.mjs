@@ -7,6 +7,7 @@ import { fromOsrm, fromTomTom, fromValhalla, distinctRoutes } from '../public/sr
 import { poisAlongRoute, reportPois, signalsAlongRoute, summarize } from '../public/src/pois.js';
 import { fmtDistance, fmtDuration } from '../public/src/i18n.js';
 import { Navigator } from '../public/src/navigator.js';
+import { tollFeatures } from '../public/src/map.js';
 
 const fixture = (name) => JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8'));
 const pois = JSON.parse(readFileSync(new URL('../public/data/pois.json', import.meta.url), 'utf8'));
@@ -155,6 +156,25 @@ test('a TomTom exit takes its side from the turn angle, so the arrow points the 
   assert.equal(maneuverIcon(exit(-45)), 'fork-left');
   assert.equal(maneuverIcon(exit(45)), 'fork-right');
   assert.equal(maneuverIcon(exit(undefined)), 'straight');
+});
+
+test('a toll stretch blends from blue to jade and back over 150 m, with TOL every kilometre', () => {
+  const coords = [[101.7, 3.15], [101.7, 3.17]];
+  const cum = cumulative(coords);
+  const route = { coords, cum, distance: cum.at(-1), tollSections: [[500, 1800]] };
+  const lines = (along) => tollFeatures(route, along).filter((f) => f.geometry.type === 'LineString');
+  const labels = (along) => tollFeatures(route, along).filter((f) => f.geometry.type === 'Point');
+  const ts = lines(0).map((f) => f.properties.t);
+  const fadeIn = ts.filter((_, i) => i % 2 === 0 && i < 16);
+  assert.deepEqual(fadeIn, [...fadeIn].sort((x, y) => x - y), 'blue to jade, step by step');
+  assert.ok(fadeIn[0] < 0.1 && fadeIn.at(-1) > 0.9);
+  assert.equal(ts.filter((t) => t === 1).length, 1);
+  const ends = lines(0).map((f) => [locate(coords, cum, f.geometry.coordinates[0]).along, locate(coords, cum, f.geometry.coordinates.at(-1)).along]).sort((x, y) => x[0] - y[0]);
+  assert.ok(Math.abs(ends[0][0] - 425) < 1 && Math.abs(ends.at(-1)[1] - 1875) < 1);
+  for (let i = 1; i < ends.length; i++) assert.ok(Math.abs(ends[i][0] - ends[i - 1][1]) < 1, 'no gaps between colour steps');
+  assert.deepEqual(labels(0).map((f) => Math.round(locate(coords, cum, f.geometry.coordinates).along)), [575, 1575]);
+  assert.ok(lines(1000).every((f) => locate(coords, cum, f.geometry.coordinates[0]).along >= 999), 'nothing behind the car');
+  assert.equal(labels(1000).length, 1);
 });
 
 test('marks one traffic light per junction the route drives through', () => {

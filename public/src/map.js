@@ -1,4 +1,4 @@
-import { slice, tilesAlong } from './geo.js';
+import { pointAt, slice, tilesAlong } from './geo.js';
 import { UI } from './icons.js';
 import { REPORT_ICON } from './reports.js';
 
@@ -46,9 +46,13 @@ const FLOW_WIDTH = ['interpolate', ['linear'], ['zoom'], 8, 1.5, 12, 2.5, 15, 4,
 const FLOW_SIDE = ['case', ['!=', ['get', 'traffic_road_coverage'], 'one_side'], 0, ['has', 'left_hand_traffic'], -1, 1];
 const FLOW_OFFSET = ['interpolate', ['linear'], ['zoom'], 8, ['*', FLOW_SIDE, 1], 12, ['*', FLOW_SIDE, 1.5], 15, ['*', FLOW_SIDE, 2.5], 18, ['*', FLOW_SIDE, 4.5]];
 const ROUTE_COLORS = {
-  day: { glow: '#1aa0ff', casing: '#0a5ec2', main: '#1aa0ff', alt: '#9aa8ba' },
-  night: { glow: '#2fb4ff', casing: '#e3f3ff', main: '#2fb4ff', alt: '#5d6f8f' },
+  day: { glow: '#1aa0ff', casing: '#0a5ec2', main: '#1aa0ff', alt: '#9aa8ba', toll: '#0fa883', tollCasing: '#087058' },
+  night: { glow: '#2fb4ff', casing: '#e3f3ff', main: '#2fb4ff', alt: '#5d6f8f', toll: '#17b890', tollCasing: '#d4f5ea' },
 };
+const TOLL_FADE = 150;
+const TOLL_STEPS = 8;
+const TOLL_LABEL_EVERY = 1000;
+const TOLL_LABEL_HALO = '#087058';
 const PALETTE = {
   day: {
     fills: {
@@ -190,6 +194,29 @@ function el(tag, className, html = '') {
 }
 
 const line = (coords, properties = {}) => ({ type: 'Feature', properties, geometry: { type: 'LineString', coordinates: coords } });
+
+export function tollFeatures(route, along = 0) {
+  const out = [];
+  const piece = (from, to, t) => {
+    const a = Math.max(from, along, 0);
+    const b = Math.min(to, route.distance);
+    if (b > a) out.push(line(slice(route.coords, route.cum, a, b), { t: Math.round(t * 1000) / 1000 }));
+  };
+  for (const [a, b] of route.tollSections || []) {
+    const half = Math.min(TOLL_FADE, b - a) / 2;
+    const step = (2 * half) / TOLL_STEPS;
+    for (let k = 0; k < TOLL_STEPS; k++) {
+      const t = (k + 0.5) / TOLL_STEPS;
+      piece(a - half + k * step, a - half + (k + 1) * step, t);
+      piece(b - half + k * step, b - half + (k + 1) * step, 1 - t);
+    }
+    piece(a + half, b - half, 1);
+    for (let at = a + half; at < b - half; at += TOLL_LABEL_EVERY) {
+      if (at >= along) out.push({ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: pointAt(route.coords, route.cum, at) } });
+    }
+  }
+  return out;
+}
 
 export class MapView {
   constructor(container, { night = false, threeD = true, ...handlers } = {}) {
@@ -336,9 +363,20 @@ export class MapView {
     add({ id: 'sb-routes-glow', type: 'line', source: 'sb-routes', filter: selected, layout: LINE, paint: { 'line-color': c.glow, 'line-width': width(1, 6), 'line-blur': width(0.4), 'line-opacity': this.night ? 0.3 : 0.15 } });
     add({ id: 'sb-traffic-edge', type: 'line', source: 'sb-traffic', layout: LINE, paint: { 'line-color': '#7a271a', 'line-width': width(1, 10) } });
     add({ id: 'sb-traffic', type: 'line', source: 'sb-traffic', layout: LINE, paint: { 'line-color': ['match', ['get', 'level'], 1, '#f79009', 2, '#e8590c', 3, '#d92d20', '#7a271a'], 'line-width': width(1, 8) } });
+    const tollLine = ['==', ['geometry-type'], 'LineString'];
+    const blend = (from, to) => ['interpolate', ['linear'], ['get', 't'], 0, from, 1, to];
     add({ id: 'sb-routes-casing', type: 'line', source: 'sb-routes', filter: selected, layout: LINE, paint: { 'line-color': c.casing, 'line-width': width(1, 2.5) } });
+    add({ id: 'sb-toll-casing', type: 'line', source: 'sb-toll', filter: tollLine, layout: LINE, paint: { 'line-color': blend(c.casing, c.tollCasing), 'line-width': width(1, 2.5) } });
     add({ id: 'sb-routes-main', type: 'line', source: 'sb-routes', filter: selected, layout: LINE, paint: { 'line-color': c.main, 'line-width': width() } });
-    add({ id: 'sb-toll', type: 'line', source: 'sb-toll', layout: LINE, paint: { 'line-color': '#ffcc00', 'line-width': width(0.3), 'line-dasharray': [1, 2] } });
+    add({ id: 'sb-toll', type: 'line', source: 'sb-toll', filter: tollLine, layout: LINE, paint: { 'line-color': blend(c.main, c.toll), 'line-width': width() } });
+    add({
+      id: 'sb-toll-label',
+      type: 'symbol',
+      source: 'sb-toll',
+      filter: ['==', ['geometry-type'], 'Point'],
+      layout: { 'text-field': 'TOL', 'text-font': ['Noto Sans Bold'], 'text-size': 11, 'text-letter-spacing': 0.1, 'text-allow-overlap': true },
+      paint: { 'text-color': '#ffffff', 'text-halo-color': TOLL_LABEL_HALO, 'text-halo-width': 2 },
+    });
     this.addSignals(before);
     this.addStations();
     this.apply3D();
@@ -490,7 +528,7 @@ export class MapView {
             .filter(([, b]) => b > along)
             .map(([a, b, props = {}]) => line(slice(route.coords, route.cum, Math.max(a, along), b), props))
         : [];
-    this.update('toll', { type: 'FeatureCollection', features: sections(route?.tollSections || []) });
+    this.update('toll', { type: 'FeatureCollection', features: route ? tollFeatures(route, along) : [] });
     const traffic = (route?.traffic || []).map((s) => [s.from, s.to, { level: Math.min(4, Math.max(1, s.magnitude || 1)) }]);
     this.update('traffic', { type: 'FeatureCollection', features: sections(traffic) });
   }
