@@ -111,18 +111,16 @@ export function signalsAlongRoute(route, flat) {
     const lat = flat[i + 1];
     if (lon < minX - pad || lon > maxX + pad || lat < minY - pad || lat > maxY + pad) continue;
     const hit = nearestOnGrid(route.coords, route.cum, index, [lon, lat]);
-    if (hit && hit.dist <= limit) hits.push({ lon, lat, along: hit.along, dist: hit.dist });
+    if (hit && hit.dist <= limit) hits.push({ lon, lat, along: hit.along });
   }
   hits.sort((a, b) => a.along - b.along);
   const junctions = [];
+  let end = -Infinity;
   for (const h of hits) {
-    const last = junctions.at(-1);
-    if (last && h.along - last.end <= SIGNAL_MERGE) {
-      last.end = h.along;
-      if (h.dist < last.best.dist) last.best = h;
-    } else junctions.push({ end: h.along, best: h });
+    if (h.along - end > SIGNAL_MERGE) junctions.push(h);
+    end = h.along;
   }
-  return junctions.map(({ best: { lon, lat, along } }) => ({ lon, lat, along }));
+  return junctions;
 }
 
 export function trafficPois(route) {

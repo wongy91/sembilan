@@ -158,6 +158,16 @@ test('a TomTom exit takes its side from the turn angle, so the arrow points the 
   assert.equal(maneuverIcon(exit(undefined)), 'straight');
 });
 
+test('at a dual-carriageway junction, the light you stop at is the one marked, not the far carriageway', () => {
+  const coords = [[101.7, 3.15], [101.7, 3.16], [101.71, 3.16]];
+  const route = { provider: 'tomtom', coords, cum: cumulative(coords) };
+  const stopLine = [101.699987, 3.15985];
+  const farCarriageway = [101.70022, 3.16];
+  const [only, ...rest] = signalsAlongRoute(route, [...farCarriageway, ...stopLine]);
+  assert.deepEqual([only.lon, only.lat], stopLine);
+  assert.equal(rest.length, 0);
+});
+
 test('a toll stretch blends from blue to jade and back over 150 m, with TOL every kilometre', () => {
   const coords = [[101.7, 3.15], [101.7, 3.17]];
   const cum = cumulative(coords);
