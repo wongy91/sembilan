@@ -18,7 +18,7 @@ Free, open-source turn-by-turn navigation for Malaysia that runs in the browser.
 | R&R | The next rest area on your side of the highway |
 | Community reports | Accident, police, hazard, jam, road closed, flood, pothole. Other drivers confirm or clear them |
 | Search | Places and street addresses with the distance to each. Branches of a chain come nearest first, with their neighbourhood and street ("Bubble Gum Wax (Bukit Jalil)"). Nearby ⛽ petrol, 🍜 food, 🅿️ parking and 🔌 EV charging, also while driving. While driving, ⛽ lists the petrol stations on the next 50 km of your route (OpenStreetMap), in the order you reach them, with how far ahead and the extra minutes each adds ("+3 min", from Valhalla); stations more than a 10-minute detour away are left out. Addresses use TomTom when a key is set |
-| Map | Day and night themes (automatic by time), 2D or 3D buildings, traffic lights (while navigating, one per junction on your route stands out and the rest fade), petrol stations and EV chargers with their brand (Petronas, Shell, Petron, BHPetrol, Caltex; Tesla, Gentari, ChargeSini, JomCharge, ChargEV, DC Handal, Shell Recharge) from street-level zoom (OpenStreetMap), long-press to drop a pin |
+| Map | Day and night themes (automatic by time), 2D or 3D buildings, traffic lights (while navigating, one per junction on your route stands out and the rest fade), petrol stations and EV chargers with their brand (Petronas, Shell, Petron, BHPetrol, Caltex; Tesla, Gentari, ChargeSini, JomCharge, ChargEV, DC Handal, Shell Recharge, TNB Electron, CHARGE+; read from the charger's network, brand, name or operator) from street-level zoom (OpenStreetMap), long-press to drop a pin |
 | Add a stop | While driving, tap a search result or a petrol station on the map, then **Add stop**: the route goes through it and carries on to your destination. The stop shows under the arrival time with the distance to it; ✕ removes it. **Go here instead** replaces the destination |
 | While driving | Arrival time that follows live traffic (refreshed every 5 minutes), a green sign with the exit number and destinations for highway exits, speedometer with speed-limit sign and a ding when you go more than 5 km/h over the limit, a 🅿️ card with car parks near your destination 1 km before you arrive, current street name, an arrow that follows the road instead of every GPS wobble, the road you've driven kept as a faded line, quick mute, search and settings, share ETA, arrival screen, screen stays awake |
 | Saved places | Home, Work, your own named places (⭐ Save on any place) and recent places (⋯ to remove one), kept on your phone. Home and Work show the drive time from where you are ("Home · 23 min"), refreshed at most every 10 minutes. **Copy my places** makes a private link that adds them on another phone or in the home-screen app |
@@ -140,6 +140,7 @@ Everything secret is a Worker secret, set with `npx wrangler secret put <NAME>`.
 - `public/data/pois.json`: toll plazas, speed cameras and R&R from OpenStreetMap, with PLUS codes matched by name (91 of 94).
 - `public/data/signals.json`: traffic lights from OpenStreetMap.
 - `public/data/fuel.json`: petrol stations from OpenStreetMap, with name and street, for petrol on your route.
+- `public/data/ev.json`: EV chargers from OpenStreetMap, with their charging network, for the map's EV icons.
 - `public/data/areas.json`: neighbourhood, suburb, town and city names from OpenStreetMap, for telling branches apart in search.
 
 ### Places index (DuckDB)
@@ -180,7 +181,7 @@ Bundled data and assets keep their own licenses:
 
 | What | License |
 | -- | -- |
-| `public/data/pois.json`, `signals.json`, `fuel.json`, `areas.json` and the saved route and search responses in `tests/fixtures/` | © OpenStreetMap contributors, [ODbL](https://opendatacommons.org/licenses/odbl/) |
+| `public/data/pois.json`, `signals.json`, `fuel.json`, `ev.json`, `areas.json` and the saved route and search responses in `tests/fixtures/` | © OpenStreetMap contributors, [ODbL](https://opendatacommons.org/licenses/odbl/) |
 | `public/data/places/` (generated, not in git) | Overture Maps Foundation, [CDLA-Permissive-2.0](https://cdla.dev/permissive-2-0/) |
 | `public/fonts/` (Nunito) | [SIL Open Font License 1.1](public/fonts/OFL.txt) |
 | MapLibre GL JS, loaded from a CDN | BSD-3-Clause |

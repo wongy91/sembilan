@@ -8,6 +8,7 @@ const STYLES = {
 };
 export const KL = [101.6869, 3.139];
 export const SIGNAL_ZOOM = 15.5;
+export const STATION_ZOOM = 14;
 const SIGNAL_BEHIND = 15;
 const SIGNAL_DIM = 0.3;
 const PASSED_OPACITY = 0.4;
@@ -25,9 +26,8 @@ const STATIONS = [
     id: 'sb-ev',
     kind: 'charging_station',
     color: '#079455',
-    label: stationLabel(
-      brandOf([[['tesla', 'supercharger'], 'Tesla'], [['gentari'], 'Gentari'], [['chargesini', 'charge sini'], 'ChargeSini'], [['jomcharge'], 'JomCharge'], [['chargev'], 'ChargEV'], [['dc handal'], 'DC Handal'], [['shell'], 'Shell Recharge']]),
-    ),
+    source: 'sb-chargers',
+    label: stationLabel(['get', 'brand']),
   },
 ];
 const EMPTY = { type: 'FeatureCollection', features: [] };
@@ -320,7 +320,7 @@ export class MapView {
       m.on('click', id, (e) => {
         const f = e.features[0];
         const [lon, lat] = f.geometry.coordinates;
-        this.handlers.onStationClick?.({ name: f.properties.name || '', lon, lat, kind });
+        this.handlers.onStationClick?.({ name: f.properties.name || f.properties.brand || '', lon, lat, kind });
       });
     }
     m.on('mouseenter', 'sb-routes-alt', () => (m.getCanvas().style.cursor = 'pointer'));
@@ -387,16 +387,16 @@ export class MapView {
     const m = this.map;
     if (!m.getSource('openmaptiles')) return;
     const font = m.getStyle().layers.find((l) => l['source-layer'] === 'poi' && l.layout?.['text-font'])?.layout['text-font'] || ['Noto Sans Regular'];
+    if (!m.getSource('sb-chargers')) m.addSource('sb-chargers', { type: 'geojson', data: this.chargers || EMPTY });
     for (const station of STATIONS) {
       if (m.getLayer(station.id)) continue;
       if (!m.hasImage(station.id)) m.addImage(station.id, stationIcon(station), { pixelRatio: 2 });
+      const from = station.source ? { source: station.source } : { source: 'openmaptiles', 'source-layer': 'poi', filter: ['==', ['get', 'subclass'], station.kind] };
       m.addLayer({
         id: station.id,
         type: 'symbol',
-        source: 'openmaptiles',
-        'source-layer': 'poi',
-        minzoom: 14,
-        filter: ['==', ['get', 'subclass'], station.kind],
+        ...from,
+        minzoom: STATION_ZOOM,
         layout: {
           'icon-image': station.id,
           'icon-size': ['interpolate', ['linear'], ['zoom'], 14, 0.8, 17, 1.05],
@@ -412,6 +412,14 @@ export class MapView {
         paint: { 'text-color': this.night ? '#e4e7ec' : '#344054', 'text-halo-color': this.night ? '#101419' : '#fff', 'text-halo-width': 1.5 },
       });
     }
+  }
+
+  setChargers(list) {
+    this.chargers = {
+      type: 'FeatureCollection',
+      features: list.map(([lon, lat, brand, name]) => ({ type: 'Feature', properties: { brand, name }, geometry: { type: 'Point', coordinates: [lon, lat] } })),
+    };
+    this.map.getSource('sb-chargers')?.setData(this.chargers);
   }
 
   setSignals(flat) {

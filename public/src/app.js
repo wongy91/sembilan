@@ -1,5 +1,5 @@
 import { reportError } from './errors.js';
-import { KL, MapView, SIGNAL_ZOOM } from './map.js';
+import { KL, MapView, SIGNAL_ZOOM, STATION_ZOOM } from './map.js';
 import { fmtAgo, fmtClock, fmtDistance, fmtDuration, getLang, setLang, t } from './i18n.js';
 import { nearbyPlaces, reversePlace, searchPlaces, withBranchNames } from './search.js';
 import { detourTimes, fasterRoute, loadLanes, pickFaster, planRoutes } from './routing.js';
@@ -1559,6 +1559,14 @@ function loadSignals() {
   if (map.map.getZoom() >= SIGNAL_ZOOM - 1) signalData();
 }
 
+function loadChargers() {
+  if (state.chargers || map.map.getZoom() < STATION_ZOOM - 1) return;
+  state.chargers = fetch('data/ev.json')
+    .then((r) => r.json())
+    .then((data) => map.setChargers(data.ev))
+    .catch(() => (state.chargers = null));
+}
+
 function showRouteSignals(nav) {
   const route = nav.route;
   signalData().then((flat) => {
@@ -1924,6 +1932,8 @@ fetch('data/pois.json')
   .then((data) => (state.poiData = data))
   .catch(() => {});
 map?.map.on('zoomend', loadSignals);
+map?.map.on('zoomend', loadChargers);
+map?.map.once('load', loadChargers);
 health().then((backend) => {
   state.backend = backend;
   state.backendKnown = true;
