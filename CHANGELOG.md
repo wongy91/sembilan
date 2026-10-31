@@ -4,6 +4,12 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.28.1] - 2026-10-31
+
+### Fixed
+
+- **At a big junction, the light where you turn was highlighted instead of the one you stop at.** The stop line at the junction entrance sat a few metres from the route line and was skipped. Now, when your route goes through a junction, the app highlights its first light, your stop line, even if it's a few metres off the line. Slip roads that bypass the junction still highlight nothing.
+
 ## [0.28.0] - 2026-10-31
 
 ### Changed
@@ -378,7 +384,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.28.0...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.28.1...HEAD
+[0.28.1]: https://github.com/wongy91/sembilan/compare/0.28.0...0.28.1
 [0.28.0]: https://github.com/wongy91/sembilan/compare/0.27.2...0.28.0
 [0.27.2]: https://github.com/wongy91/sembilan/compare/0.27.1...0.27.2
 [0.27.1]: https://github.com/wongy91/sembilan/compare/0.27.0...0.27.1
