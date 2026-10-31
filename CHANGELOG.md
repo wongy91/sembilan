@@ -4,6 +4,12 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-10-31
+
+### Changed
+
+- **More EV chargers show their charging network on the map**: 30 more of the 220 chargers in OpenStreetMap now carry their network label, such as ChargEV at AEON Mall Rawang, JomCharge at DBKL sites, and TNB Electron and CHARGE+, which weren't recognised before. ChargeSini, Tesla and DC Handal were already labelled. The chargers now come with the app, so they also show without signal.
+
 ## [0.28.1] - 2026-10-31
 
 ### Fixed
@@ -384,7 +390,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.28.1...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.29.0...HEAD
+[0.29.0]: https://github.com/wongy91/sembilan/compare/0.28.1...0.29.0
 [0.28.1]: https://github.com/wongy91/sembilan/compare/0.28.0...0.28.1
 [0.28.0]: https://github.com/wongy91/sembilan/compare/0.27.2...0.28.0
 [0.27.2]: https://github.com/wongy91/sembilan/compare/0.27.1...0.27.2
