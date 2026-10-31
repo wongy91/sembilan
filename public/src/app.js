@@ -43,6 +43,7 @@ const state = {
   toastTimer: null,
   myReports: new Set(),
   backendKnown: false,
+  backendReady: null,
   commute: {},
 };
 
@@ -90,6 +91,7 @@ const OFFER_MS = 20000;
 const QUIET_AFTER_CHANGE = 2 * 60000;
 const QUIET_AFTER_DECLINE = 10 * 60000;
 const SPEEDING_TONES = [1175];
+const BACKEND_WAIT = 3000;
 const CAMERA_TICK = [[988], 0.1];
 const CAMERA_OVER = [[1568, 1568], 0.3];
 const PARKING_AT = 1000;
@@ -751,9 +753,14 @@ function driveOptions(nav, fix) {
   return { ...routeOptions(), heading: fix.heading, via };
 }
 
-function prefetchRoutes(place) {
+function prefetchRoutes(place, waited = false) {
   state.prefetch = null;
   if (!state.fix) return;
+  if (!state.backendKnown && !waited) {
+    state.prefetch = { waiting: true };
+    state.backendReady.then(() => state.mode === 'place' && state.place === place && prefetchRoutes(place, true));
+    return;
+  }
   const from = [state.fix.lon, state.fix.lat];
   const commute = Object.values(state.commute).find((e) => e.key === routeKey(place) && Date.now() - e.at < 120000 && haversine(e.from, from) < 150);
   const entry = commute || { key: routeKey(place), from, at: Date.now(), promise: planRoutes(from, [place.lon, place.lat], routeOptions()) };
@@ -838,6 +845,8 @@ async function plan() {
   state.planAbort?.abort();
   const ctrl = (state.planAbort = new AbortController());
   try {
+    if (!state.backendKnown) await state.backendReady;
+    if (ctrl.signal.aborted) return;
     const here = [state.fix.lon, state.fix.lat];
     const fresh = () => planRoutes(here, [dest.lon, dest.lat], { ...routeOptions(), signal: ctrl.signal });
     const pre = state.prefetch;
@@ -1109,7 +1118,7 @@ function navTick(fix) {
   checkStop(nav, progress, fix);
   const position = progress.snapped || [fix.lon, fix.lat];
   const heading = progress.snapped ? bearingAt(nav.route.coords, nav.route.cum, progress.along) : fix.heading;
-  map.driveTo(position, heading, fix.speed ?? 0);
+  map.driveTo(position, heading, fix.speed);
   if (!nav.lineAt || (performance.now() - nav.lineAt > 1000 && Math.abs(progress.along - nav.lineAlong) > 20)) drawNavRoutes(nav, progress.along);
   updateBanner(progress);
   if (progress.along > nav.lanesTo - 20000 && nav.lanesTo < nav.route.distance) fetchNavLanes(nav, progress.along);
@@ -1925,6 +1934,18 @@ applyTexts();
 setTheme();
 bindUi();
 render();
+state.backendReady = Promise.race([
+  health().then((backend) => {
+    state.backend = backend;
+    state.backendKnown = true;
+    refreshCommute();
+    $('row-traffic').hidden = !backend.traffic || !map;
+    if (!map) return;
+    if (backend.traffic && settings.traffic) map.setTraffic(true);
+    map.ready.then(refreshReports);
+  }),
+  new Promise((resolve) => setTimeout(resolve, BACKEND_WAIT)),
+]);
 if (map) startGps();
 openFromUrl();
 fetch('data/pois.json')
@@ -1934,15 +1955,6 @@ fetch('data/pois.json')
 map?.map.on('zoomend', loadSignals);
 map?.map.on('zoomend', loadChargers);
 map?.map.once('load', loadChargers);
-health().then((backend) => {
-  state.backend = backend;
-  state.backendKnown = true;
-  refreshCommute();
-  $('row-traffic').hidden = !backend.traffic || !map;
-  if (!map) return;
-  if (backend.traffic && settings.traffic) map.setTraffic(true);
-  map.ready.then(refreshReports);
-});
 if ('serviceWorker' in navigator) {
   let installedBefore = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener('controllerchange', () => {

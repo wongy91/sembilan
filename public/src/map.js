@@ -1,4 +1,4 @@
-import { pointAt, slice, tilesAlong } from './geo.js';
+import { haversine, pointAt, slice, tilesAlong } from './geo.js';
 import { UI } from './icons.js';
 import { REPORT_ICON } from './reports.js';
 
@@ -12,6 +12,8 @@ export const STATION_ZOOM = 14;
 const SIGNAL_BEHIND = 15;
 const SIGNAL_DIM = 0.3;
 const PASSED_OPACITY = 0.4;
+const STILL_SPEED = 0.7;
+const STILL_DRIFT = 8;
 const STATION_NAME = ['downcase', ['coalesce', ['get', 'name'], '']];
 const brandOf = (brands) => ['case', ...brands.flatMap(([words, brand]) => [['any', ...words.map((w) => ['in', w, STATION_NAME])], brand]), ''];
 const stationLabel = (brand) => ['step', ['zoom'], brand, 16, ['case', ['!=', brand, ''], brand, ['coalesce', ['get', 'name'], '']]];
@@ -610,9 +612,11 @@ export class MapView {
     }
     const d = this.drive;
     const from = d.car || { pos: lonLat, heading: Number.isFinite(heading) ? heading : 0 };
+    const still = d.car && Number.isFinite(speed) && speed < STILL_SPEED && haversine(d.car.pos, lonLat) < STILL_DRIFT;
     d.from = from;
-    d.to = { pos: lonLat, heading: Number.isFinite(heading) && (speed || 0) >= 1.5 ? heading : from.heading };
-    d.dur = d.last ? Math.min(1500, Math.max(250, (now - d.last) * 0.9)) : 0;
+    d.to = { pos: still ? from.pos : lonLat, heading: Number.isFinite(heading) && (speed || 0) >= 1.5 ? heading : from.heading };
+    const moved = d.to.pos !== from.pos || d.to.heading !== from.heading;
+    d.dur = d.last && moved ? Math.min(1500, Math.max(250, (now - d.last) * 0.9)) : 0;
     d.last = now;
     d.t0 = now;
     d.speed = speed || 0;
@@ -653,9 +657,12 @@ export class MapView {
     const k = d.dur > 0 ? Math.min(1, (now - d.t0) / d.dur) : 1;
     const pos = [d.from.pos[0] + (d.to.pos[0] - d.from.pos[0]) * k, d.from.pos[1] + (d.to.pos[1] - d.from.pos[1]) * k];
     const heading = (d.from.heading + angleDelta(d.from.heading, d.to.heading) * k + 360) % 360;
+    const changed = !d.car || pos[0] !== d.car.pos[0] || pos[1] !== d.car.pos[1] || heading !== d.car.heading;
     d.car = { pos, heading };
-    this.user.setLngLat(pos);
-    this.user.setRotation(heading);
+    if (changed) {
+      this.user.setLngLat(pos);
+      this.user.setRotation(heading);
+    }
     let settling = false;
     if (d.follow && !d.held) {
       const dt = Math.min(100, now - (d.lastFrame ?? now));
@@ -668,12 +675,17 @@ export class MapView {
       cam.bearing += angleDelta(cam.bearing, heading) * a * 0.6;
       cam.zoom += (zoom - cam.zoom) * a * 0.4;
       cam.pitch += (pitch - cam.pitch) * a * 0.5;
-      this.map.jumpTo(cam);
       settling =
         Math.abs(pos[0] - cam.center[0]) + Math.abs(pos[1] - cam.center[1]) > 1e-7 ||
         Math.abs(angleDelta(cam.bearing, heading)) > 0.2 ||
         Math.abs(zoom - cam.zoom) > 0.01 ||
         Math.abs(pitch - cam.pitch) > 0.2;
+      if (!settling) Object.assign(cam, { center: [...pos], bearing: heading, zoom, pitch });
+      const view = `${cam.center}|${cam.bearing}|${cam.zoom}|${cam.pitch}`;
+      if (view !== d.view) {
+        d.view = view;
+        this.map.jumpTo(cam);
+      }
     }
     d.lastFrame = now;
     if (k < 1 || settling) this.kick();
