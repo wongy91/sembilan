@@ -4,6 +4,16 @@ All notable changes to Sembilan are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.29.1] - 2026-10-31
+
+### Changed
+
+- **Less battery use when you're stopped**: while navigating, the map no longer redraws itself about 60 times a second when the car isn't moving, such as at a red light or in a jam. It now redraws only when something changes, and small GPS wander while you're stopped no longer nudges the car. Driving looks the same as before.
+
+### Fixed
+
+- **Opening a destination link gave a route without live traffic** and showed a travel time that ignored traffic (1 h 57 min instead of 2 h 10 min on the test drive). The first route now waits a moment for live traffic to be available, and tapping Directions afterwards opens the routes at once instead of fetching them again (1.5 s faster).
+
 ## [0.29.0] - 2026-10-31
 
 ### Changed
@@ -390,7 +400,8 @@ First public release.
 - Day and night map themes, 2D or 3D buildings, speed-limit sign, share ETA and a demo drive.
 - Offline copy of the app, install prompts for Android, iPhone and Mac Safari, and full screen on Android while navigating.
 
-[Unreleased]: https://github.com/wongy91/sembilan/compare/0.29.0...HEAD
+[Unreleased]: https://github.com/wongy91/sembilan/compare/0.29.1...HEAD
+[0.29.1]: https://github.com/wongy91/sembilan/compare/0.29.0...0.29.1
 [0.29.0]: https://github.com/wongy91/sembilan/compare/0.28.1...0.29.0
 [0.28.1]: https://github.com/wongy91/sembilan/compare/0.28.0...0.28.1
 [0.28.0]: https://github.com/wongy91/sembilan/compare/0.27.2...0.28.0
