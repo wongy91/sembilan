@@ -329,8 +329,8 @@ export class MapView {
     const selected = ['get', 'selected'];
     add({ id: 'sb-routes-alt', type: 'line', source: 'sb-routes', filter: ['!', selected], layout: LINE, paint: { 'line-color': c.alt, 'line-width': width(0.75), 'line-opacity': 0.9 } });
     add({ id: 'sb-routes-glow', type: 'line', source: 'sb-routes', filter: selected, layout: LINE, paint: { 'line-color': c.glow, 'line-width': width(1, 6), 'line-blur': width(0.4), 'line-opacity': this.night ? 0.3 : 0.15 } });
-    add({ id: 'sb-traffic-edge', type: 'line', source: 'sb-traffic', layout: LINE, paint: { 'line-color': '#7a271a', 'line-width': width(1.8, 10) } });
-    add({ id: 'sb-traffic', type: 'line', source: 'sb-traffic', layout: LINE, paint: { 'line-color': ['match', ['get', 'level'], 1, '#f79009', 2, '#e8590c', 3, '#d92d20', '#7a271a'], 'line-width': width(1.8, 8) } });
+    add({ id: 'sb-traffic-edge', type: 'line', source: 'sb-traffic', layout: LINE, paint: { 'line-color': '#7a271a', 'line-width': width(1, 10) } });
+    add({ id: 'sb-traffic', type: 'line', source: 'sb-traffic', layout: LINE, paint: { 'line-color': ['match', ['get', 'level'], 1, '#f79009', 2, '#e8590c', 3, '#d92d20', '#7a271a'], 'line-width': width(1, 8) } });
     add({ id: 'sb-routes-casing', type: 'line', source: 'sb-routes', filter: selected, layout: LINE, paint: { 'line-color': c.casing, 'line-width': width(1, 2.5) } });
     add({ id: 'sb-routes-main', type: 'line', source: 'sb-routes', filter: selected, layout: LINE, paint: { 'line-color': c.main, 'line-width': width() } });
     add({ id: 'sb-toll', type: 'line', source: 'sb-toll', layout: LINE, paint: { 'line-color': '#ffcc00', 'line-width': width(0.3), 'line-dasharray': [1, 2] } });
