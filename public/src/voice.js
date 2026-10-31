@@ -72,7 +72,7 @@ export function say(items, { force = false } = {}) {
   }
 }
 
-export function chime(tones = [880, 1320]) {
+export function chime(tones = [880, 1320], volume = 0.25) {
   if (!enabled || !audio) return;
   const now = audio.currentTime;
   tones.forEach((freq, i) => {
@@ -80,7 +80,7 @@ export function chime(tones = [880, 1320]) {
     const gain = audio.createGain();
     osc.frequency.value = freq;
     gain.gain.setValueAtTime(0.0001, now + i * 0.16);
-    gain.gain.exponentialRampToValueAtTime(0.25, now + i * 0.16 + 0.02);
+    gain.gain.exponentialRampToValueAtTime(volume, now + i * 0.16 + 0.02);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.16 + 0.14);
     osc.connect(gain).connect(audio.destination);
     osc.start(now + i * 0.16);

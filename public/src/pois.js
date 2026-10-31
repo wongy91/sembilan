@@ -151,7 +151,7 @@ export function summarize(pois) {
   };
 }
 
-export const ALERT_LEAD = { camera: [450, 20], toll: [600, 25], report: [600, 25], traffic: [1500, 45] };
+export const ALERT_LEAD = { camera: [1000, 35], toll: [600, 25], report: [600, 25], traffic: [1500, 45] };
 
 export function alertText(poi, meters, lang = 'ms') {
   const dist = spokenDistance(meters, lang);

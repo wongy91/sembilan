@@ -90,6 +90,8 @@ const OFFER_MS = 20000;
 const QUIET_AFTER_CHANGE = 2 * 60000;
 const QUIET_AFTER_DECLINE = 10 * 60000;
 const SPEEDING_TONES = [1175];
+const CAMERA_TICK = [[988], 0.1];
+const CAMERA_OVER = [[1568, 1568], 0.3];
 const PARKING_AT = 1000;
 const PARKING_WITHIN = 800;
 const PARKING_MS = 30000;
@@ -1078,13 +1080,31 @@ function showAlert(a) {
   state.alertTimer = setTimeout(() => (node.hidden = true), ask ? 12000 : 9000);
 }
 
+function showCamera(cam) {
+  const node = $('alert');
+  const mine = node.dataset.kind === 'camera';
+  if (!cam) {
+    if (mine) node.hidden = true;
+    return;
+  }
+  if (!node.hidden && !mine) return;
+  node.innerHTML = `<span>${esc(alertLabel({ kind: 'camera', maxspeed: cam.maxspeed }))} · ${esc(fmtDistance(cam.distance))}</span>`;
+  node.dataset.kind = 'camera';
+  node.dataset.over = cam.over ? '1' : '';
+  node.dataset.report = '';
+  node.hidden = false;
+  clearTimeout(state.alertTimer);
+}
+
 function navTick(fix) {
   const nav = state.nav;
   const out = nav.navigator.update(fix);
   if (out.speech.length) voice.say(out.speech);
   if (out.alerts.some((a) => a.kind === 'camera')) voice.chime();
   if (out.speeding) voice.chime(SPEEDING_TONES);
+  if (out.camera?.tick) voice.chime(...(out.camera.tick === 'over' ? CAMERA_OVER : CAMERA_TICK));
   out.alerts.forEach(showAlert);
+  showCamera(out.camera);
   const progress = out.progress;
   checkStop(nav, progress, fix);
   const position = progress.snapped || [fix.lon, fix.lat];

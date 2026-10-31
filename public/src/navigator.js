@@ -10,6 +10,11 @@ const STOPPED = 2;
 const PLAZA = 300;
 const PLAZA_TOLERANCE = 90;
 const STAYED_OFF = 10000;
+const CAMERA_STEP = 100;
+const CAMERA_NEAR = 300;
+const CAMERA_NEAR_STEP = 50;
+const CAMERA_MOVING = 3;
+const CAMERA_PASSED = 10;
 
 function timeAfter(route, index, along) {
   const steps = route.steps;
@@ -199,7 +204,25 @@ export class Navigator {
 
     out.progress = this.progress(loc);
     out.speeding = this.checkSpeed(speed, out.progress.speedLimit, fix.time ?? Date.now());
+    out.camera = this.cameraAhead(speed, out.progress.speedLimit);
     return out;
+  }
+
+  cameraAhead(speed, roadLimit) {
+    const cam = this.pois.find((q) => q.kind === 'camera' && this.alerted.has(q.id) && q.along - this.along >= -CAMERA_PASSED);
+    if (!cam) {
+      this.cameraMark = null;
+      return null;
+    }
+    const distance = Math.max(0, cam.along - this.along);
+    const limit = cam.maxspeed || roadLimit || null;
+    const over = !!limit && Math.round((speed ?? 0) * 3.6) > limit;
+    const near = distance <= CAMERA_NEAR;
+    const mark = `${cam.id}:${near ? 'near' : 'far'}:${Math.ceil(distance / (near ? CAMERA_NEAR_STEP : CAMERA_STEP))}`;
+    const moving = speed === null || speed >= CAMERA_MOVING;
+    const tick = this.cameraMark?.startsWith(`${cam.id}:`) && mark !== this.cameraMark && moving ? (over ? 'over' : 'soft') : null;
+    this.cameraMark = mark;
+    return { distance, maxspeed: cam.maxspeed || null, over, tick };
   }
 
   checkSpeed(speed, limit, time) {

@@ -203,3 +203,53 @@ test('after a reroute, the first instruction of the new route is spoken once, qu
   const next = pointAt(route.coords, route.cum, 34);
   assert.equal(nav.update({ lon: next[0], lat: next[1], accuracy: 5, speed: 14, heading: bearingAt(route.coords, route.cum, 34), time: 1000 }).speech.length, 0);
 });
+
+function cameraDrive(plan, { limit = 110 } = {}) {
+  const [route] = fromValhalla(fixture('valhalla_kl_ipoh.json'));
+  const camAlong = 60000;
+  const nav = new Navigator(route, { lang: 'en', resumed: true, pois: [{ kind: 'camera', id: 'camera:test', along: camAlong, maxspeed: limit }] });
+  let along = camAlong - 2000;
+  let t = 0;
+  const log = { alertAt: null, ticks: [], shown: [], after: undefined };
+  for (const [kmh, seconds] of plan) {
+    for (let i = 0; i < seconds && along < camAlong + 40; i++, t++) {
+      const v = kmh / 3.6;
+      along += v;
+      const p = pointAt(route.coords, route.cum, along);
+      const out = nav.update({ lon: p[0], lat: p[1], accuracy: 5, speed: v, heading: bearingAt(route.coords, route.cum, along), time: t * 1000 });
+      if (out.alerts.some((a) => a.kind === 'camera')) log.alertAt = camAlong - along;
+      if (out.camera?.tick) log.ticks.push({ tick: out.camera.tick, d: Math.round(out.camera.distance), t, kmh });
+      if (out.camera) log.shown.push(Math.round(out.camera.distance));
+      log.after = out.camera;
+    }
+  }
+  return log;
+}
+
+test('a speed camera is announced about 35 seconds ahead, over 1 km at highway speed', () => {
+  const log = cameraDrive([[110, 200]]);
+  assert.ok(log.alertAt >= 1000 && log.alertAt <= 1100, `announced ${Math.round(log.alertAt)} m before`);
+  assert.ok(cameraDrive([[50, 400]]).alertAt >= 970, 'at least about 1 km even when slow');
+});
+
+test('approaching a camera ticks every 100 m, every 50 m in the last 300 m, and the card counts down until you pass', () => {
+  const log = cameraDrive([[110, 200]]);
+  assert.ok(log.ticks.length >= 12 && log.ticks.length <= 16, `${log.ticks.length} ticks`);
+  assert.ok(log.ticks.every((x) => x.tick === 'soft'), 'quiet ticks at the limit');
+  const gaps = log.ticks.slice(1).map((x, i) => x.t - log.ticks[i].t);
+  assert.ok(Math.max(...gaps) <= 4, 'about every 3 s at 110 km/h');
+  assert.deepEqual(log.shown, [...log.shown].sort((a, b) => b - a), 'distance only counts down');
+  assert.equal(log.after, null, 'gone once you pass the camera');
+});
+
+test('over the camera limit the ticks turn into sharp beeps', () => {
+  const log = cameraDrive([[130, 200]]);
+  assert.ok(log.ticks.length > 0 && log.ticks.every((x) => x.tick === 'over'));
+});
+
+test('stuck in a jam near a camera, the ticks stop', () => {
+  const log = cameraDrive([[110, 40], [0, 180], [2, 120], [110, 200]]);
+  const jam = log.ticks.filter((x) => x.kmh < 10);
+  assert.equal(jam.length, 0, 'no ticks while stopped or crawling');
+  assert.ok(log.ticks.some((x) => x.kmh === 110 && x.t > 340), 'ticking resumes once moving');
+});

@@ -419,6 +419,10 @@ body.searching .fab-menu {
   color: #fff;
 }
 
+#alert[data-kind='camera'][data-over='1'] {
+  background: var(--danger);
+}
+
 #alert[data-kind='toll'] {
   background: var(--yellow);
   color: #2b2100;
